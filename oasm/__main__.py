@@ -6,6 +6,7 @@ from cli_tools import yes_no, get_input, styles as s
 
 from .parser import Parser
 from .codegen import CodeGenerator
+from .exceptions import OasmException
 
 
 def path_validator(inp: str):
@@ -66,6 +67,8 @@ def live_session():
 
         try:
             process_file(file_name)
+        except OasmException as e:
+            print(s.error(str(e)))
         except Exception as e:
             print(s.error(f'Error: {e}'))
             if yes_no('Show traceback? [y/n]: '):
@@ -83,6 +86,8 @@ if __name__ == '__main__':
     elif len(args) == 2:
         try:
             process_file(args[1])
+        except OasmException as e:
+            print(s.error(str(e)))
         except Exception as e:
             print(s.error(f'Error: {e}'))
             if yes_no('Show traceback? [y/n]: '):
@@ -90,6 +95,8 @@ if __name__ == '__main__':
     elif len(args) == 3:
         try:
             process_file(args[1], args[2])
+        except OasmException as e:
+            print(s.error(str(e)))
         except Exception as e:
             print(s.error(f'Error: {e}'))
             if yes_no('Show traceback? [y/n]: '):
