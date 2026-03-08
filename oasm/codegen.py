@@ -27,7 +27,7 @@ class CodeGenerator:
                 case 'bytes':
                     self.data_chunks.append(var['value'])
                 case _:
-                    raise Exception(f'Variable {name} has unknown type')
+                    raise RuntimeError(f'Variable {name} has unknown type')
 
         self.data_section = b''.join(self.data_chunks)
 
