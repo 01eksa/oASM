@@ -11,6 +11,8 @@ ARRAY = re.compile(r'\[(.+?)]')
 REP_STRING = re.compile(r'"((?:[^"\\]|\\.)+)"\s*\*\s*([0-9]+)')
 REP_ARRAY = re.compile(r'\[(.+?)]\s*\*\s*([0-9]+)')
 
+ARRAY_INDEX = re.compile(r'([a-zA-Z_]\w*)\[([0-9]+)]', re.ASCII)
+
 VAR = re.compile(r'[a-zA-Z_]\w*', re.ASCII)
 LABEL = re.compile(r'[a-zA-Z_]\w*:', re.ASCII)
 FUNCTION = re.compile(r'([a-zA-Z_]\w*)\((.*)\)', re.ASCII)
