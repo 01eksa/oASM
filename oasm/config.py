@@ -19,6 +19,7 @@ commands = {
   "POP":       {"code": 17,  "size": 1,  "args": []},
   "DUP":       {"code": 18,  "size": 1,  "args": []},
   "PUSHDATA":  {"code": 19,  "size": 9,  "args": ["data"]},
+  "POPDATA":   {"code": 20,  "size": 9,  "args": ["data"]},
 
   "PUSHCP":    {"code": 32,  "size": 1,  "args": []},
   "POPCP":     {"code": 33,  "size": 1,  "args": []},
@@ -78,10 +79,12 @@ commands = {
   "FTOI":      {"code": 118, "size": 1, "args": []},
 }
 
-alias_commands = {
+command_aliases = {
   "PUSH": ["PUSHREG", "PUSHDATA"],
   "POP": ["POPREG", "POPDATA"],
   "MOV": ["SETREG"],
+  "INC": ["INCREG"],
+  "DEC": ["DECREG"],
 }
 
 registers = {
@@ -99,6 +102,7 @@ registers = {
 
 functions = {
   "sizeof": ["data"],
+  "len": ["data"],
 }
 
 sections = [
