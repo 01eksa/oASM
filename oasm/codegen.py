@@ -7,6 +7,9 @@ class CodeGenerator:
         self.variables = parser.variables
         self.labels = parser.labels
 
+        self.data_chunks = []
+        self.code_chunks = []
+
         self.code_section = b''
         self.data_section = b''
 
@@ -16,13 +19,17 @@ class CodeGenerator:
 
             match var['type']:
                 case 'string':
-                    self.data_section += var['value'].encode('utf-8')
+                    self.data_chunks.append(var['value'].encode('utf-8'))
                 case 'f64':
-                    self.data_section += struct.pack('<d', var['value'])
+                    self.data_chunks.append(struct.pack('<d', var['value']))
                 case 'i64':
-                    self.data_section += var['value'].to_bytes(8, byteorder='little')
+                    self.data_chunks.append(var['value'].to_bytes(8, byteorder='little'))
+                case 'bytes':
+                    self.data_chunks.append(var['value'])
                 case _:
                     raise Exception(f'Variable {name} has unknown type')
+
+        self.data_section = b''.join(self.data_chunks)
 
     def gen_code(self):
         for command in self.commands:
@@ -32,7 +39,7 @@ class CodeGenerator:
             if command['type'] != 'command':
                 raise RuntimeError(f'Unknown command type: {command}')
 
-            self.code_section += config.commands[command['name']]['code'].to_bytes(1)
+            self.code_chunks.append(config.commands[command['name']]['code'].to_bytes(1))
 
             if command['args']:
                 for arg in command['args']:
@@ -43,20 +50,22 @@ class CodeGenerator:
                             reg = config.registers.get(arg_val)
                             if reg is None:
                                 raise RuntimeError(f'Unknown register: {arg_val}')
-                            self.code_section += reg.to_bytes(1)
+                            self.code_chunks.append(reg.to_bytes(1))
                         case 'i64':
                             if isinstance(arg_val, int):
-                                self.code_section += arg_val.to_bytes(8, byteorder='little', signed=True)
+                                self.code_chunks.append(arg_val.to_bytes(8, byteorder='little', signed=True))
                             elif isinstance(arg_val, float):
-                                self.code_section += struct.pack('<d', arg_val)
+                                self.code_chunks.append(struct.pack('<d', arg_val))
                             else:
                                 raise RuntimeError(f'{arg_val} does not have a valid type')
                         case 'data':
-                            self.code_section += arg_val.to_bytes(8, byteorder='little')
+                            self.code_chunks.append(arg_val.to_bytes(8, byteorder='little'))
                         case 'label':
-                            self.code_section += self.labels[arg_val].to_bytes(8, byteorder='little')
+                            self.code_chunks.append(self.labels[arg_val].to_bytes(8, byteorder='little'))
                         case _:
                             raise RuntimeError(f'Unknown type: {arg_type}')
+
+        self.code_section = b''.join(self.code_chunks)
 
     def gen_file(self, stack_size = 0, call_stack_size = 0):
         self.gen_data()
