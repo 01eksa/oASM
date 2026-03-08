@@ -2,6 +2,7 @@ import struct
 
 from . import config
 from . import patterns as p
+from .exceptions import OasmNameError, OasmIndexError, OasmSyntaxError
 
 class Parser:
     def __init__(self, source):
@@ -21,13 +22,13 @@ class Parser:
 
         match_name = p.VAR.fullmatch(name)
         if not match_name:
-            raise SyntaxError(f'Error in line {self._line}: {name} is invalid')
+            raise OasmSyntaxError(self._line, f'{name} is invalid')
 
         if name.upper() in config.reserved:
-            raise SyntaxError(f'Error in line {self._line}: {name} is reserved')
+            raise OasmSyntaxError(self._line, f'{name} is reserved')
 
         if len(tokens) != 2:
-            raise SyntaxError(f'Error in line {self._line}: Invalid syntax')
+            raise OasmSyntaxError(self._line, 'invalid syntax')
 
         raw_value = tokens[1]
         var_type = None
@@ -73,7 +74,7 @@ class Parser:
             var_value = b''.join(var_chunks)
             var_size = len(var_value)
         else:
-            raise SyntaxError(f'Error in line {self._line}: {raw_value} is not a valid value')
+            raise OasmSyntaxError(self._line, f'{raw_value} is not a valid value')
 
         self.variables[name] = {'value': var_value, 'size': var_size, 'type': var_type, 'addr': self._addr}
         self._addr += var_size
@@ -89,7 +90,7 @@ class Parser:
 
         name = tokens[0].upper()
         if name not in config.commands:
-            raise SyntaxError(f'Error in line {self._line}: Unknown command: {name}')
+            raise OasmSyntaxError(self._line, f'unknown command: {name}')
 
         command = dict()
         command['type'] = 'command'
@@ -113,7 +114,7 @@ class Parser:
                     arg_value = float(token)
                 elif p.VAR.fullmatch(token):
                     if token.upper() in config.commands:
-                        raise SyntaxError(f'Error in line {self._line}: Invalid syntax')
+                        raise OasmSyntaxError(self._line, 'invalid syntax')
                     if (reg := token.upper()) in config.registers:
                         arg_type = 'reg'
                         arg_value = reg
@@ -121,26 +122,26 @@ class Parser:
                         arg_type = 'data'
                         arg_value = self.variables[token]['addr']
                     else:
-                        raise NameError(f'Error in line {self._line}: Unknown identifier: {token}')
+                        raise OasmNameError(self._line, f'unknown identifier: {token}')
                 elif p.LABEL.fullmatch(token):
                     arg_type = 'label'
                     arg_value = token
                 elif func := p.FUNCTION.fullmatch(token):
                     func_name = func.group(1)
                     if func_name not in config.functions:
-                        raise NameError(f'Error in line {self._line}: Unknown compile-time function: {func_name}')
+                        raise OasmNameError(self._line, f'unknown compile-time function: {func_name}')
 
                     match func_name:
                         case 'sizeof':
                             var = func.group(2)
                             if var not in self.variables:
-                                raise NameError(f'Error in line {self._line}: Unknown variable: {var}')
+                                raise OasmNameError(self._line, f'unknown variable: {var}')
                             arg_type = 'i64'
                             arg_value = self.variables[var]['size']
                         case 'len':
                             var = func.group(2)
                             if var not in self.variables:
-                                raise NameError(f'Error in line {self._line}: Unknown variable: {var}')
+                                raise OasmNameError(self._line, f'unknown variable: {var}')
                             arg_type = 'i64'
                             if self.variables[var]['type'] == 'string':
                                 arg_value = self.variables[var]['size']
@@ -150,21 +151,33 @@ class Parser:
                             raise RuntimeError(
                                 f'Error: function {func_name} exist in the config, but is not handled in the code.'
                                 'Please report this to the developer.')
+                elif match := p.ARRAY_INDEX.fullmatch(token):
+                    arr_name = match.group(1)
+                    index = int(match.group(2))
+                    if arr_name not in self.variables:
+                        raise OasmNameError(self._line, f'Unknown variable: {arr_name}')
+
+                    offset = self.variables[arr_name]['addr'] + index * 8
+                    if offset + 8 > (self.variables[arr_name]['addr'] + self.variables[arr_name]['size']):
+                        raise OasmIndexError(self._line, 'index out of range')
+
+                    arg_type = 'data'
+                    arg_value = offset
                 else:
-                    raise SyntaxError(f'Error in line {self._line}: Invalid syntax')
+                    raise OasmSyntaxError(self._line, 'Invalid syntax')
 
                 command['args'].append({'type': arg_type, 'value': arg_value})
                 arg_types.append(arg_type)
 
         if arg_types != config.commands[name]['args']:
             if name not in config.command_aliases:
-                raise SyntaxError(f'Error in line {self._line}: wrong arguments for command {name}')
+                raise OasmSyntaxError(self._line, f'wrong arguments for command {name}')
             for alias in config.command_aliases[name]:
                 if arg_types == config.commands[alias]['args']:
                     command['name'] = alias
                     break
             else:
-                raise SyntaxError(f'Error in line {self._line}: wrong arguments for command {name}')
+                raise OasmSyntaxError(self._line, f'wrong arguments for command {name}')
 
 
         command['addr'] = self._addr
@@ -193,7 +206,7 @@ class Parser:
                 continue
 
             if self._section is None:
-                raise Exception(f'Error in line {self._line}: Wrong format')
+                raise OasmSyntaxError(self._line, 'you cannot write code out of sections')
 
             if self._section == '.data':
                 self.parse_data(line)
@@ -212,6 +225,6 @@ class Parser:
             elif p.FLOAT.fullmatch(el):
                 array.append(struct.pack('<d', float(el)))
             else:
-                raise SyntaxError(f'Error in line {self._line}: {el} is not a valid element for a list')
+                raise OasmSyntaxError(self._line, f'{el} is not a valid element for array')
 
         return array
