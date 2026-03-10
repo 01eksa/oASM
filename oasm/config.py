@@ -37,6 +37,8 @@ commands = {
   "FREE":      {"code": 65,  "size": 1,  "args": []},
   "WRITE":     {"code": 66,  "size": 1,  "args": []},
   "READ":      {"code": 67,  "size": 1,  "args": []},
+  "WRITEB":     {"code": 68,  "size": 1,  "args": []},
+  "READB":      {"code": 69,  "size": 1,  "args": []},
 
   "INC":       {"code": 80,  "size": 1,  "args": []},
   "DEC":       {"code": 81,  "size": 1,  "args": []},
