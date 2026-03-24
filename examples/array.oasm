@@ -1,0 +1,33 @@
+; DEMO
+; Fill array from keyboard and then print it
+section .data
+    array = [0] * 5
+
+section .code
+    mov     cr, 5
+    input_loop:
+        push    array
+        push    cr
+        dec
+        push    8
+        mul
+        add
+        scanint
+        write
+        loop input_loop:
+
+
+    mov     cr, 5
+    output_loop:
+        push    array
+        push    cr
+        dec
+        push    8
+        mul
+        add
+        read
+        printint
+        printendl
+        loop output_loop:
+
+    exit

@@ -1,0 +1,9 @@
+section .data
+	msg = "Hello, World!\n\0"
+
+section .code
+	mov			FR,		1	; number of printstr vmcall
+	pushdata 	msg			; pointer to c-style string
+	pop 		ARG1		
+	vmcall
+	exit

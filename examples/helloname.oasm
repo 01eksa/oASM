@@ -1,0 +1,37 @@
+; DEMO
+; Ask for a name and say hello to this name
+section .data
+	q 		= "Hello! What is your name?\n\0"
+	ask 	= "> \0"
+	name 	= "\0"*20							; 20-char buffer
+	nice 	= "Nice to meet you, \0"
+
+section .code
+	push     	q
+	call 		print:
+	push     	ask
+	call 		print:
+
+	push     	name
+	mov  		ARG2, sizeof(name)
+	call 		input:
+
+	push     	nice
+	call 		print:
+	push     	name
+	call 		print:
+
+	printendl
+	exit
+
+print:
+	mov 		FR, 1        ; номер виклику printstr
+	pop 		ARG1         ; посилання на рядок
+	vmcall
+	ret
+
+input:
+	mov 		FR, 2        ; номер виклику printstr
+	pop 		ARG1         ; посилання на рядок
+	vmcall
+	ret

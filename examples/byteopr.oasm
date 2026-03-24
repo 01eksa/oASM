@@ -1,0 +1,25 @@
+; DEMO
+; Rewrite exactly one byte
+section .data
+    line_1 = "You should see it twice\n"
+    line_2 = "\nYou should see it once\n\n\0"
+
+
+section .code
+    push    line_1
+    call    print:
+
+    push    line_2
+    push    '\0'
+    writeb
+
+    push    line_1
+    call    print:
+    
+    exit
+
+print:
+    mov     fr,     1   ; number of vmcall for print
+    pop     arg1        ; pointer to c-string
+    vmcall
+    ret
