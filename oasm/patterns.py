@@ -1,19 +1,26 @@
 import re
 
-BLANK = re.compile(r'\s+')
+IDENTIFIER = re.compile(r'[a-zA-Z_]\w*', re.ASCII)
+SECTION = re.compile(r'section\s+(?:\.code|\.data)', re.IGNORECASE)
+LABEL = re.compile(rf'{IDENTIFIER.pattern}:', re.ASCII)
 
-INT = re.compile(r'[-+]?[0-9]+')
-INT16 = re.compile(r'[-+]?0x[0-9a-fA-F]+')
-FLOAT = re.compile(r'[-+]?[0-9]*\.[0-9]+')
-STRING = re.compile(r'"((?:[^"\\]|\\.)+)"')
-ARRAY = re.compile(r'\[(.+?)]')
 
-REP_STRING = re.compile(r'"((?:[^"\\]|\\.)+)"\s*\*\s*([0-9]+)')
-REP_ARRAY = re.compile(r'\[(.+?)]\s*\*\s*([0-9]+)')
+FLOAT = re.compile(r'(?:\d+\.\d*|\.\d+)(?:[Ee][+-]?\d+)?')
+HEX_INT = re.compile(r'0x[a-fA-F0-9]+')
+INT = re.compile(r'\d+')
 
-ARRAY_INDEX = re.compile(r'([a-zA-Z_]\w*)\[([0-9]+)]', re.ASCII)
+CHAR = re.compile(r"'(?:[\x20-\x26\x28-\x5B\x5D-\x7E]|\\[\x20-\x7F])'")
+STRING = re.compile(r'"(?:[^"\\\n]|\\[\x20-\x7F])+"')
 
-VAR = re.compile(r'[a-zA-Z_]\w*', re.ASCII)
-LABEL = re.compile(r'[a-zA-Z_]\w*:', re.ASCII)
-FUNCTION = re.compile(r'([a-zA-Z_]\w*)\((.*)\)', re.ASCII)
-SECTION = re.compile(r'section\s+(\.code|\.data)', re.IGNORECASE)
+L_PAREN = re.compile(r'\(')
+R_PAREN = re.compile(r'\)')
+L_BRACKET = re.compile(r'\[')
+R_BRACKET = re.compile(r']')
+OP = re.compile(r'[+\-*/]')
+ASSIGN = re.compile(r'=')
+COMMA = re.compile(r',')
+
+NEWLINE = re.compile(r'\n')
+SKIP = re.compile(r'[ \t]+|;.*')
+UNCLOSED_STRING = re.compile(r'"[^"\n]*')
+MISMATCH = re.compile(r'.')

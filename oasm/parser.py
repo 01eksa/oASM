@@ -1,230 +1,278 @@
-import struct
-
-from . import config
-from . import patterns as p
-from .exceptions import OasmNameError, OasmIndexError, OasmSyntaxError
-
-class Parser:
-    def __init__(self, source):
-        self.source = source
-        self.variables = {}
-        self.commands = []
-        self.labels = {}
-        self._section = None
-        self._addr = 0
-        self._line = 0
-
-    def parse_data(self, line: str):
-        tokens = line.split('=')
-        tokens = [token.strip() for token in tokens]
-
-        name = tokens[0]
-
-        match_name = p.VAR.fullmatch(name)
-        if not match_name:
-            raise OasmSyntaxError(self._line, f'{name} is invalid')
-
-        if name.upper() in config.reserved:
-            raise OasmSyntaxError(self._line, f'{name} is reserved')
-
-        if len(tokens) != 2:
-            raise OasmSyntaxError(self._line, 'invalid syntax')
-
-        raw_value = tokens[1]
-        var_type = None
-        var_size = None
-
-        if p.INT.fullmatch(raw_value):
-            var_type = 'i64'
-            var_value = int(raw_value)
-            var_size = 8
-        elif p.INT16.fullmatch(raw_value):
-            var_type = 'i64'
-            var_value = int(raw_value, 16)
-            var_size = 8
-        elif p.FLOAT.fullmatch(raw_value):
-            var_type = 'f64'
-            var_value = float(raw_value)
-            var_size = 8
-        elif string := p.STRING.fullmatch(raw_value):
-            var_type = 'string'
-            var_value = bytes(string.group(1), 'utf-8').decode('unicode_escape')
-            var_size = len(var_value.encode('utf-8'))
-        elif array := p.ARRAY.fullmatch(raw_value):
-            elements = [e.strip() for e in array.group(1).split(',') if e.strip()]
-            var_type = 'bytes'
-            var_chunks = self.parse_array(elements)
-
-            var_value = b''.join(var_chunks)
-            var_size = len(var_value)
-        elif match := p.REP_STRING.fullmatch(raw_value):
-            var_type = 'string'
-            var_value = bytes(match.group(1), 'utf-8').decode('unicode_escape')
-            reps = int(match.group(2).strip())
-            var_value *= reps
-            var_size = len(var_value.encode('utf-8'))
-        elif array := p.REP_ARRAY.fullmatch(raw_value):
-            elements = [e.strip() for e in array.group(1).split(',') if e.strip()]
-            reps = int(array.group(2).strip())
-
-            var_type = 'bytes'
-            var_chunks = self.parse_array(elements)
-
-            var_chunks *= reps
-            var_value = b''.join(var_chunks)
-            var_size = len(var_value)
-        else:
-            raise OasmSyntaxError(self._line, f'{raw_value} is not a valid value')
-
-        self.variables[name] = {'value': var_value, 'size': var_size, 'type': var_type, 'addr': self._addr}
-        self._addr += var_size
+from .ast_nodes import *
+from .tokenizer import Tokens
+from .exceptions import OasmSyntaxError, OasmNameError
 
 
-    def parse_code(self, line: str):
-        tokens = line.split()
+class ASTBuilder:
+    def __init__(self, tokens):
+        self.tokens = tokens
+        self.pos = -1
+        self.current_token = None
+        self.eat()
 
-        if p.LABEL.fullmatch(tokens[0]):
-            self.commands.append({'type': 'label', 'name': tokens[0]})
-            self.labels[tokens[0]] = self._addr
-            return
+    def check_eof(self):
+        if self.current_token is not None:
+            raise OasmSyntaxError(
+                self.current_token.meta,
+                f"Unexpected token: '{self.current_token.raw_value}'"
+            )
 
-        name = tokens[0].upper()
-        if name not in config.commands:
-            raise OasmSyntaxError(self._line, f'unknown command: {name}')
+    def eat(self):
+        self.pos += 1
+        self.current_token = self.tokens[self.pos] if self.pos < len(self.tokens) else None
 
-        command = dict()
-        command['type'] = 'command'
-        command['name'] = name
-        command['args'] = []
-        arg_types = []
+    def bin_op(self, func, op_values):
+        left = func()
+        while self.current_token is not None and self.current_token.raw_value in op_values:
+            op = self.current_token
+            self.eat()
+            right = func()
 
-        if len(tokens) > 1:
-            for token in tokens[1::]:
-                arg_type = None
-                arg_value = None
+            left = BinOpNode(left, op, right)
+        return left
 
-                if p.INT.fullmatch(token):
-                    arg_type = 'i64'
-                    arg_value = int(token)
-                elif p.INT16.fullmatch(token):
-                    arg_type = 'i64'
-                    arg_value = int(token, 16)
-                elif p.FLOAT.fullmatch(token):
-                    arg_type = 'i64'
-                    arg_value = float(token)
-                elif p.VAR.fullmatch(token):
-                    if token.upper() in config.commands:
-                        raise OasmSyntaxError(self._line, 'invalid syntax')
-                    if (reg := token.upper()) in config.registers:
-                        arg_type = 'reg'
-                        arg_value = reg
-                    elif token in self.variables:
-                        arg_type = 'data'
-                        arg_value = self.variables[token]['addr']
-                    else:
-                        raise OasmNameError(self._line, f'unknown identifier: {token}')
-                elif p.LABEL.fullmatch(token):
-                    arg_type = 'label'
-                    arg_value = token
-                elif func := p.FUNCTION.fullmatch(token):
-                    func_name = func.group(1)
-                    if func_name not in config.functions:
-                        raise OasmNameError(self._line, f'unknown compile-time function: {func_name}')
+    def factor(self):
+        token = self.current_token
 
-                    match func_name:
-                        case 'sizeof':
-                            var = func.group(2)
-                            if var not in self.variables:
-                                raise OasmNameError(self._line, f'unknown variable: {var}')
-                            arg_type = 'i64'
-                            arg_value = self.variables[var]['size']
-                        case 'len':
-                            var = func.group(2)
-                            if var not in self.variables:
-                                raise OasmNameError(self._line, f'unknown variable: {var}')
-                            arg_type = 'i64'
-                            if self.variables[var]['type'] == 'string':
-                                arg_value = self.variables[var]['size']
-                            else:
-                                arg_value = self.variables[var]['size'] // 8
-                        case _:
-                            raise RuntimeError(
-                                f'Error: function {func_name} exist in the config, but is not handled in the code.'
-                                'Please report this to the developer.')
-                elif match := p.ARRAY_INDEX.fullmatch(token):
-                    arr_name = match.group(1)
-                    index = int(match.group(2))
-                    if arr_name not in self.variables:
-                        raise OasmNameError(self._line, f'Unknown variable: {arr_name}')
+        if token is None:
+            raise RuntimeError('Expected token, got None')
 
-                    offset = self.variables[arr_name]['addr'] + index * 8
-                    if offset + 8 > (self.variables[arr_name]['addr'] + self.variables[arr_name]['size']):
-                        raise OasmIndexError(self._line, 'index out of range')
+        if token.type in ('int', 'hex_int', 'float', 'char',):
+            self.eat()
+            return NumberNode(token)
+        elif token.type == 'string':
+            self.eat()
+            return StringNode(token)
+        elif token.type == 'identifier':
+            self.eat()
+            node = IdentifierNode(token)
 
-                    arg_type = 'data'
-                    arg_value = offset
-                else:
-                    raise OasmSyntaxError(self._line, 'Invalid syntax')
+            if self.current_token is not None and self.current_token.raw_value == '[':
+                self.eat()
+                index_expr = self.expr()
+                if self.current_token is None or self.current_token.raw_value != ']':
+                    raise OasmSyntaxError(token.meta, "Expected ']' after array index")
+                self.eat()
 
-                command['args'].append({'type': arg_type, 'value': arg_value})
-                arg_types.append(arg_type)
+                return IndexNode(node.token, index_expr)
 
-        if arg_types != config.commands[name]['args']:
-            if name not in config.command_aliases:
-                raise OasmSyntaxError(self._line, f'wrong arguments for command {name}')
-            for alias in config.command_aliases[name]:
-                if arg_types == config.commands[alias]['args']:
-                    command['name'] = alias
-                    break
-            else:
-                raise OasmSyntaxError(self._line, f'wrong arguments for command {name}')
+            return node
+        elif token.type == 'reg':
+            self.eat()
+            return RegisterNode(token)
+        elif token.type == 'label':
+            self.eat()
+            return LabelNode(token)
+        elif token.type == 'function':
+            self.eat()
+            if self.current_token.type != 'l_paren':
+                raise OasmSyntaxError(
+                    self.current_token.meta,
+                    f'"(" expected, got f{self.current_token.raw_value} instead'
+                )
+            self.eat()
+            args = self.parse_list('r_paren')
+            if (val := self.current_token.raw_value) != ')' or self.current_token is None:
+                raise OasmSyntaxError(token.meta, f"Expected ')', got {val} instead")
 
+            self.eat()
+            self.check_eof()
+            return FunctionNode(token, ListNode(args))
+        elif token.type == 'l_bracket':
+            self.eat()
+            lst = self.parse_list('r_bracket')
+            if (val := self.current_token.type) != 'r_bracket' or self.current_token is None:
+                raise OasmSyntaxError(token.meta, f"Expected ']', got {val} instead")
 
-        command['addr'] = self._addr
-        self._addr += config.commands[command['name']]['size']
+            self.eat()
+            return ListNode(lst)
+        elif token.type == 'l_paren':
+            self.eat()
+            result = self.expr()
+            if (val := self.current_token.type) != 'r_paren' or self.current_token is None:
+                raise OasmSyntaxError(token.meta, f"Expected ')', got {val} instead")
 
-        self.commands.append(command)
+            self.eat()
+            return result
+        elif token.raw_value in ('+', '-'):
+            self.eat()
+            right = self.factor()
+            return UnaryOpNode(token, right)
+        raise OasmSyntaxError(
+            token.meta,
+            f"Unexpected token: {token.raw_value}"
+        )
 
+    def pow(self):
+        left = self.factor()
+
+        if self.current_token is None or self.current_token.raw_value != '^':
+            return left
+
+        op = self.current_token
+        self.eat()
+        right = self.pow()
+
+        return BinOpNode(left, op, right)
+
+    def term(self):
+        return self.bin_op(self.pow, ('*', '/'))
+
+    def expr(self):
+        return self.bin_op(self.term, ('+', '-'))
 
     def parse(self):
-        self._section = None
-        self._addr = 0
-        self._line = 0
-        lines = self.source.split('\n')
+        if self.current_token is None:
+            return None
 
-        for line in lines:
-            self._line += 1
-            line = line.split(';')[0].strip()
+        result = self.expr()
 
-            if not line or p.BLANK.fullmatch(line):
-                continue
+        if self.current_token is not None:
+            raise OasmSyntaxError(self.current_token.meta, "Unexpected token after expression: {self.current_token}'")
 
-            match = p.SECTION.fullmatch(line)
-            if match:
-                self._section = match.group(1).lower()
-                self._addr = 0
-                continue
+        return result
 
-            if self._section is None:
-                raise OasmSyntaxError(self._line, 'you cannot write code out of sections')
+    def parse_list(self, end_token_type):
+        elements = []
+        if self.current_token and self.current_token.type != end_token_type:
+            elements.append(self.expr())
+            while self.current_token and self.current_token.type == 'comma':
+                self.eat()
+                elements.append(self.expr())
 
-            if self._section == '.data':
-                self.parse_data(line)
-            elif self._section == '.code':
-                self.parse_code(line)
+        return elements
 
-    def parse_array(self, elements: list[str]) -> list[bytes]:
-        array = []
+    def parse_command_args(self, end_token_type):
+        elements = []
+        if self.current_token and self.current_token.type != end_token_type:
+            elements.append(self.expr())
+            while self.current_token and self.current_token.type == 'comma':
+                self.eat()
+                elements.append(self.expr())
 
-        for el in elements:
-            el = el.strip()
-            if p.INT.fullmatch(el):
-                array.append(int(el).to_bytes(8, byteorder='little', signed=True))
-            elif p.INT16.fullmatch(el):
-                array.append(int(el, 16).to_bytes(8, byteorder='little', signed=True))
-            elif p.FLOAT.fullmatch(el):
-                array.append(struct.pack('<d', float(el)))
+        self.check_eof()
+        return elements
+
+
+class Parser:
+    def __init__(self, tokens: Tokens):
+        self.tokens = tokens
+
+        self.lines = []
+
+        self.macros = {}
+        self.consts = {}
+        self.variables = {}
+        self.labels = {}
+        self.commands = []
+
+        self.macro_section = []
+        self.data_section = []
+        self.code_section = []
+
+
+    def work(self):
+        self.split()
+        self.sectionize()
+        self.parse_macro()
+        self.parse_data()
+        self.parse_code()
+        return self.macros, self.consts, self.variables, self.commands
+
+    def split(self):
+        temp_tokens = []
+
+        for token in self.tokens:
+            if token.type == 'newline':
+                if temp_tokens:
+                    self.lines.append(temp_tokens)
+                    temp_tokens = []
             else:
-                raise OasmSyntaxError(self._line, f'{el} is not a valid element for array')
+                temp_tokens.append(token)
 
-        return array
+        if temp_tokens:
+            self.lines.append(temp_tokens)
+            temp_tokens = []
+
+
+    def sectionize(self):
+        section = None
+        for line in self.lines:
+            command = line[0]
+            if command.type == 'section':
+                section = command.raw_value.split()[1]
+            elif section is None:
+                self.macro_section.append(line)
+            elif section == '.data':
+                self.data_section.append(line)
+            elif section == '.code':
+                self.code_section.append(line)
+            else:
+                raise OasmSyntaxError(command.meta, 'Undefined section')
+
+    def parse_macro(self):
+        ...
+
+    def parse_data(self):
+        for expr in self.data_section:
+            if len(expr) < 3:
+                raise OasmSyntaxError(expr[0].meta, 'Invalid syntax: expected <identifier> = <value>')
+            if (var_token := expr[0]).type != 'identifier':
+                raise OasmSyntaxError(
+                    var_token.meta,
+                    'Invalid syntax: expected identifier, got {var_token.type} instead',
+                )
+            elif var_token.raw_value in self.macros:
+                raise OasmNameError(
+                    var_token.meta,
+                    'This name is taken by macro',
+                )
+            elif var_token.raw_value in self.consts:
+                raise OasmNameError(
+                    var_token.meta,
+                    'This name is taken by const',
+                )
+            elif var_token.raw_value in self.variables:
+                raise OasmNameError(
+                    var_token.meta,
+                    'Variable with this name already exists',
+                )
+
+            if expr[1].type != 'assign':
+                raise OasmSyntaxError(
+                    expr[1].meta,
+                    'Invalid syntax for data section. Did you mean "="?',
+                )
+            val_tokens = expr[2:]
+
+            ast_builder = ASTBuilder(val_tokens)
+            ast = ast_builder.parse()
+
+            self.variables[var_token.raw_value] = {
+                'ast': ast,
+                'value': None,
+                'type': None,
+                'size': None,
+                'bytes': None
+            }
+
+    def parse_code(self):
+        for expr in self.code_section:
+            if (key_token := expr[0]).type == 'label':
+                if len(expr) > 1:
+                    raise OasmSyntaxError(
+                        key_token.meta,
+                        f'Invalid syntax: There should be nothing after the label',
+                    )
+                self.commands.append(LabelNode(key_token))
+                continue
+            elif (key_token := expr[0]).type != 'command':
+                raise OasmSyntaxError(
+                    key_token.meta,
+                    f'Invalid syntax: expected command, got {key_token.type} instead',
+                )
+            arg_tokens = expr[1:]
+            if not arg_tokens:
+                self.commands.append(CommandNode(key_token, []))
+                continue
+            self.commands.append(CommandNode(key_token, ASTBuilder(arg_tokens).parse_command_args(None)))

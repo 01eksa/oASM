@@ -1,6 +1,9 @@
-HEADER = b'\x4F\x56\x4D\x3E'
+from typing import Literal
+
+HEADER = "OVM>"
 MAJOR = 0
 MINOR = 1
+byteorder: Literal['little', 'big'] = 'little'
 
 commands = {
   "EXIT":      {"code": 0,   "size": 1,  "args": []},
@@ -103,8 +106,8 @@ registers = {
 }
 
 functions = {
-  "sizeof": ["data"],
-  "len": ["data"],
+  "sizeof": {'args': ["data"], 'returns': 'i64'},
+  "lenof": {'args': ["data"], 'returns': 'i64'},
 }
 
 sections = [
@@ -112,4 +115,9 @@ sections = [
   ".code",
 ]
 
-reserved = list(commands.keys()) + list(registers.keys()) + list(functions.keys())
+command_names = list(commands.keys())
+register_names = list(registers.keys())
+function_names = list(functions.keys())
+
+keywords = command_names + register_names
+reserved = keywords + function_names
