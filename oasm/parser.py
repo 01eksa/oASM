@@ -192,7 +192,6 @@ class Parser:
 
         if temp_tokens:
             self.lines.append(temp_tokens)
-            temp_tokens = []
 
 
     def sectionize(self):
