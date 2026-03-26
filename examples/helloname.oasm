@@ -13,7 +13,7 @@ section .code
 	call 		print:
 
 	push     	name
-	mov  		ARG2, sizeof(name)
+	push		sizeof(name)
 	call 		input:
 
 	push     	nice
@@ -25,13 +25,16 @@ section .code
 	exit
 
 print:
-	mov 		FR, 1        ; номер виклику printstr
-	pop 		ARG1         ; посилання на рядок
+	mov 	fr,		1	; vmcall printstr opcode
+	pop 	arg1		; pointer to string
+	mov		arg2,	0	; read until \0
 	vmcall
 	ret
 
+
 input:
-	mov 		FR, 2        ; номер виклику printstr
-	pop 		ARG1         ; посилання на рядок
+	mov 	fr, 2       ; vmcall scanstr opcode
+	pop		arg2		; size of buffer
+	pop 	arg1        ; pointer to buffer
 	vmcall
 	ret

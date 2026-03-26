@@ -19,7 +19,8 @@ section .code
     exit
 
 print:
-    mov     fr,     1   ; number of vmcall for print
-    pop     arg1        ; pointer to c-string
-    vmcall
-    ret
+	mov 	fr,		1	; vmcall printstr opcode
+	pop 	arg1		; Pointer to string
+	mov		arg2,	0	; Read until \0
+	vmcall
+	ret
