@@ -1,5 +1,3 @@
-from typing import Literal
-
 from . import config
 from .ast_nodes import *
 from .exceptions import OasmSyntaxError, OasmNameError, OasmIndexError
@@ -64,7 +62,7 @@ class Translator:
         else:
             raise TypeError(f'Unknown ref: {ref}')
 
-    def gen_file(self, stack_size=0, call_stack_size=0):
+    def gen_file(self):
         self.gen_data()
         self.gen_code()
 
@@ -74,8 +72,8 @@ class Translator:
         version = config.MAJOR.to_bytes(2, byteorder=config.byteorder) + config.MINOR.to_bytes(2, byteorder=config.byteorder)
         data_size = len(self.data_section).to_bytes(8, byteorder=config.byteorder)
         code_size = len(self.code_section).to_bytes(8, byteorder=config.byteorder)
-        stack_size = stack_size.to_bytes(8, byteorder=config.byteorder)
-        call_stack_size = call_stack_size.to_bytes(8, byteorder=config.byteorder)
+        stack_size = config.stack_size.to_bytes(8, byteorder=config.byteorder)
+        call_stack_size = config.call_stack_size.to_bytes(8, byteorder=config.byteorder)
 
         file += header + version + data_size + code_size + stack_size + call_stack_size + self.data_section + self.code_section
         return file
