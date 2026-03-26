@@ -1,0 +1,331 @@
+section .data
+    field           = " " * 9                    
+    inp_message     = "> \0"
+    wrong_num_msg   = "Number out of range!\n\0"
+    cell_taken_msg  = "This cell is already taken!\n\0"
+    separator       = "|\0"
+    line            = "-------\n\0"
+    win_msg         = "Congrats, "      ; there are no \0, so will be printed win_msg + player + win_msg_end
+    player          = "X"      
+    win_msg_end     = " won!\n\0"
+    draw_msg        = "Draw!\n\0"
+    clear           = "\033[H\033[2J"
+
+section .code
+    ; mov     reg3,   0       ; All registers are 0 by default
+    ; this is our move counter
+    call    draw_field:
+
+    main_loop:
+        call    inp:
+        call    move:
+        inc     reg3
+        call    draw_field:
+
+        call    check_win:
+        jif     win:
+
+        push    reg3
+        push    9
+        cmp
+        jif     draw:
+
+        call    toggle_player:
+        jmp     main_loop:
+
+    win:
+    push    win_msg
+    call    print:
+    exit
+
+    draw:
+    push    draw_msg
+    call    print:
+    exit
+
+print:
+    mov     fr,     1
+    pop     arg1
+    mov     arg2,   0
+    vmcall
+    ret
+
+printn:
+    mov     fr,     1
+    pop     arg2
+    pop     arg1
+    vmcall
+    ret
+
+printchr:
+    mov     fr,     1
+    pop     arg1
+    mov     arg2,   1
+    vmcall
+    ret
+
+draw_field:
+    push    cr
+
+    push    clear
+    call    print:
+
+    mov     reg1,   0
+    mov     cr,     3
+    push    line
+    call    print:
+    draw_field_loop:
+        call    draw_line:
+        push    line
+        call    print:
+        loop    draw_field_loop:
+
+    pop     cr
+    ret
+
+
+draw_line:
+    push    cr
+
+    push    separator
+    call    print:
+    mov     cr,     3
+    draw_line_loop:
+        push    field
+        push    reg1
+        add
+        call    printchr:
+        push    separator
+        call    printchr:
+        inc     reg1
+        loop    draw_line_loop:
+    printendl
+
+    pop     cr
+    ret
+
+inp:
+    ; in the end, reg1 will have a correct index of cell on field
+    clearef
+
+    push    inp_message
+    call    print:
+
+    scanint
+    jef     inp:
+    pop     reg1
+
+    push    reg1
+    push    9
+    cmpgt                   ; if num > 9
+    jif     wrong_number:
+
+    push    reg1
+    push    1
+    cmplt                   ; if num < 1
+    jif     wrong_number:
+
+    dec     reg1
+
+    push    field
+    push    reg1
+    add
+    readb
+    push    ' '
+    cmp                     
+    jnif    cell_taken:      ; if field[inp] != ' '
+
+    ret
+
+    wrong_number:
+    push    wrong_num_msg
+    call    print:
+    jmp     inp:
+
+    cell_taken:
+    push    cell_taken_msg
+    call    print:
+    jmp     inp:
+
+    ret
+
+move:
+    ; reg1 must have correct index of cell on field
+    push    field
+    push    reg1
+    add                 ; field + reg1 on stack
+    
+    push    player
+    readb               ; player value on stack
+    writeb              ; write player to field
+
+    ret
+
+check_win:
+    ; checks all win conditions, return early if found one
+    ; result will be in BF
+    push    cr
+
+    push    player
+    readb
+    pop     reg1        ; all check_ methods expect player value in reg1
+
+    mov     cr, 3
+    check_win_loop:
+        ; check all horizontals and verticals
+        mov     reg2,   cr
+        dec     reg2
+        call    check_horizontal:
+        jif     check_win_ret:
+        call    check_vertical:
+        jif     check_win_ret:
+        loop    check_win_loop:
+    
+    ; check all diagonals
+    call    check_main_diag:
+    jif     check_win_ret:
+    call    check_sec_diag:
+
+    check_win_ret:
+    pop     cr
+    ret
+
+check_horizontal:
+    ; reg1 must have player value
+    ; reg2 must have number of horizontal (0, 1 or 2)
+    ; in the end, BF has the result
+    push    cr
+    push    reg2
+
+    push    reg2
+    push    3
+    mul
+    pop     reg2
+
+    mov     cr, 3
+    check_horizontal_loop:
+        push    field
+        push    reg2
+        add
+        readb
+        push    reg1
+
+        cmp                             ; if field[reg2] != reg1
+        jnif    check_horizontal_ret:   ; break
+
+        inc     reg2                    ; in horizontal indexes go +1
+        loop    check_horizontal_loop:
+
+    check_horizontal_ret:
+    pop     reg2
+    pop     cr
+    ret
+
+check_vertical:
+    ; reg1 must have player value
+    ; reg2 must have number of vertical (0, 1 or 2)
+    ; in the end, BF will have the result
+    push    cr
+    push    reg2
+
+    mov     cr, 3
+    check_vertical_loop:
+        push    field
+        push    reg2
+        add
+        readb
+        push    reg1
+
+        cmp                             ; if field[reg2] != reg1
+        jnif    check_vertical_ret:     ; break
+
+        inc     reg2                    ; in verticals indexes go +3
+        inc     reg2
+        inc     reg2
+        loop    check_vertical_loop:
+
+    check_vertical_ret:
+    pop     reg2
+    pop     cr
+    ret
+
+check_main_diag:
+    ; reg1 must have player value
+    ; reg2 will be changed
+    ; in the end, BF will have the result
+    push    cr
+    push    reg2
+
+    mov     reg2,   0
+    mov     cr,     3
+
+    check_main_diag_loop:
+        push    field
+        push    reg2
+        add
+        readb
+        push    reg1
+
+        cmp                             ; if field[reg2] != reg1
+        jnif    check_main_diag_ret:    ; break
+
+        push    reg2
+        push    4                       ; in main diagonal indexes go +4
+        add
+        pop     reg2
+        loop    check_main_diag_loop:
+    
+    check_main_diag_ret:
+    pop     reg2
+    pop     cr
+    ret
+
+check_sec_diag:
+    ; reg1 must have player value
+    ; reg2 will be changed
+    ; in the end, BF will have the result
+    push    cr
+    push    reg2
+
+    mov     reg2,   2
+    mov     cr,     3
+
+    check_sec_diag_loop:
+        push    field
+        push    reg2
+        add
+        readb
+        push    reg1
+        
+        cmp                             ; if field[reg2] != reg1
+        jnif    check_sec_diag_ret:     ; break
+
+        inc     reg2                    ; in second diagonal indexes go +2
+        inc     reg2
+        loop    check_sec_diag_loop:
+    
+    check_sec_diag_ret:
+    pop     reg2
+    pop     cr
+    ret
+
+toggle_player:
+    push    player
+    dup
+    readb
+    push    'X'
+
+    cmp                 
+    jnif    p0:
+
+    ; if player == X
+    push    '0'
+    writeb
+    ret
+
+    ; if player != X
+    p0:
+    push    'X'
+    writeb
+
+    ret

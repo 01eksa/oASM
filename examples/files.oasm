@@ -1,0 +1,81 @@
+section .data
+    file_path   = "test_file.txt\0"
+    str         = "Line 1\nLine 2\n"
+    str2        = "Line 3\nLine 4\n"
+    success_msg = "Completed successfully\n\0"
+    fail_msg    = "Failed to write\n\0"
+    buffer_1    = "\0"*100
+    buffer_2    = "\0"*100
+
+section .code
+    push    file_path
+    push    str
+    push    sizeof(str)
+    call    write_file:
+    jef     fail:
+
+    push    file_path
+    push    buffer_1
+    push    sizeof(buffer_1)
+    call    read_file:
+    jef     fail:
+
+    push    buffer_1
+    call    print:
+
+    push    file_path
+    push    str2
+    push    sizeof(str2)
+    call    append_file:
+    jef     fail:
+
+    push    file_path
+    push    buffer_2
+    push    sizeof(buffer_2)
+    call    read_file:
+    jef     fail:
+
+    push    buffer_2
+    call    print:
+
+    push    success_msg
+    call    print:
+    exit
+
+
+fail:
+    push    fail_msg
+    call    print:
+    exit
+
+print:
+    pop     arg1
+    mov     arg2,   0
+    mov     fr,     1
+    vmcall
+    ret
+
+read_file:
+    pop     arg3
+    pop     arg2
+    pop     arg1
+    mov     fr,     0x10
+    vmcall
+    pop
+    ret
+
+write_file:
+    pop     arg3
+    pop     arg2
+    pop     arg1
+    mov     fr,     0x11
+    vmcall
+    ret
+
+append_file:
+    pop     arg3
+    pop     arg2
+    pop     arg1
+    mov     fr,     0x12
+    vmcall
+    ret
