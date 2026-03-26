@@ -4,6 +4,8 @@ HEADER = "OVM>"
 MAJOR = 0
 MINOR = 1
 byteorder: Literal['little', 'big'] = 'little'
+stack_size: int = 0
+call_stack_size: int = 0
 
 commands = {
   "EXIT":      {"code": 0,   "size": 1,  "args": []},

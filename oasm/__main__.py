@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import traceback
 
 from cli_tools import yes_no, get_input, styles as s
@@ -89,22 +90,41 @@ def live_session():
 
 
 if __name__ == '__main__':
-    args = sys.argv
+    parser = argparse.ArgumentParser(
+        prog='oASM',
+        description='Assembler for oVM',
+    )
 
-    if len(args) < 2:
-        live_session()
-    elif len(args) == 2:
+    parser.add_argument('source', nargs='?', help='Source (*.oasm file)', default=None)
+    parser.add_argument('target', nargs='?', help='Target (*.ovm file)', default=None)
+    parser.add_argument(
+        '--big',
+        action='store_true',
+        help='Use this flag to save all numbers in big-endian'
+    )
+    parser.add_argument(
+        '--stack-size',
+        type=int,
+        default=0,
+        help='Size of stack in elements (not bytes). 0 = default'
+    )
+    parser.add_argument(
+        '--call-stack-size',
+        type=int,
+        default=0,
+        help='Size of call stackin elements (number of nested calls). 0 = default'
+    )
+
+    args = parser.parse_args()
+
+    if args.big:
+        config.byteorder = 'big'
+    config.stack_size = args.stack_size
+    config.call_stack_size = args.call_stack_size
+
+    if args.source:
         try:
-            process_file(args[1])
-        except OasmException as e:
-            print(s.error(str(e)))
-        except Exception as e:
-            print(s.error(f'Error: {e}'))
-            if yes_no('Show traceback? [y/n]: '):
-                traceback.print_exc()
-    elif len(args) == 3:
-        try:
-            process_file(args[1], args[2])
+            process_file(args.source, args.target)
         except OasmException as e:
             print(s.error(str(e)))
         except Exception as e:
@@ -112,13 +132,4 @@ if __name__ == '__main__':
             if yes_no('Show traceback? [y/n]: '):
                 traceback.print_exc()
     else:
-        if '--big' in args[3:]:
-            config.byteorder = 'big'
-        try:
-            process_file(args[1], args[2])
-        except OasmException as e:
-            print(s.error(str(e)))
-        except Exception as e:
-            print(s.error(f'Error: {e}'))
-            if yes_no('Show traceback? [y/n]: '):
-                traceback.print_exc()
+        live_session()
