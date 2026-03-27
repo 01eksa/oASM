@@ -95,16 +95,24 @@ command_aliases = {
 }
 
 registers = {
-  "FR":   0,
-  "ARG1": 1,
-  "ARG2": 2,
-  "ARG3": 3,
-  "ARG4": 4,
-  "REG1": 16,
-  "REG2": 17,
-  "REG3": 18,
-  "REG4": 19,
-  "CR":   32
+    "FR"   : 0x00,
+    "ARG1" : 0x01,
+    "ARG2" : 0x02,
+    "ARG3" : 0x03,
+    "ARG4" : 0x04,
+    "ARG5" : 0x05,
+    "ARG6" : 0x06,
+    "ARG7" : 0x07,
+    "ARG8" : 0x08,
+    "CR"   : 0x10,
+    "REG1" : 0x11,
+    "REG2" : 0x12,
+    "REG3" : 0x13,
+    "REG4" : 0x14,
+    "REG5" : 0x15,
+    "REG6" : 0x16,
+    "REG7" : 0x17,
+    "REG8" : 0x18,
 }
 
 functions = {

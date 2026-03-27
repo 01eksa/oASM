@@ -1,17 +1,17 @@
-import os
-import sys
 import argparse
+import os
 import traceback
 
 from cli_tools import yes_no, get_input, styles as s
 
-from .tokenizer import Tokenizer
+from . import config
+from .exceptions import OasmException
+from .meta import File
 from .parser import Parser
 from .resolver import Resolver
+from .tokenizer import Tokenizer
 from .translator import Translator
-from .meta import File
-from .exceptions import OasmException
-from . import config
+
 
 def get_bin(file: File) -> bytes:
     tokenizer = Tokenizer(file)
@@ -35,8 +35,8 @@ def load_file(file_name: str):
         file_contents = f.read().replace('\t', '    ')
     return File(file_name, file_contents)
 
-def save_file(file_name: str, file_contents: bytes):
-    if os.path.exists(file_name):
+def save_file(file_name: str, file_contents: bytes, rewrite: bool = False):
+    if not rewrite and os.path.exists(file_name):
         if not yes_no('File already exist. Overwrite? [y/n]: '):
             file_name = get_input(
                 'Enter target file name: ',
@@ -50,7 +50,7 @@ def save_file(file_name: str, file_contents: bytes):
         f.write(file_contents)
 
 
-def process_file(file_name: str, target_file_name: str = None):
+def process_file(file_name: str, target_file_name: str = None, rewrite: bool = False):
     file = load_file(file_name)
 
     print(s.success('File successfully uploaded.'))
@@ -64,7 +64,7 @@ def process_file(file_name: str, target_file_name: str = None):
             if_invalid=s.warning('File name cannot be empty')
         )
 
-    save_file(target_file_name, bin_file)
+    save_file(target_file_name, bin_file, rewrite)
     print(s.success(f'File {target_file_name} saved'))
 
 
@@ -103,6 +103,11 @@ if __name__ == '__main__':
         help='Use this flag to save all numbers in big-endian'
     )
     parser.add_argument(
+        '--rewrite',
+        action='store_true',
+        help='Use this flag to rewrite existing file without asking'
+    )
+    parser.add_argument(
         '--stack-size',
         type=int,
         default=0,
@@ -124,7 +129,7 @@ if __name__ == '__main__':
 
     if args.source:
         try:
-            process_file(args.source, args.target)
+            process_file(args.source, args.target, args.rewrite)
         except OasmException as e:
             print(s.error(str(e)))
         except Exception as e:
