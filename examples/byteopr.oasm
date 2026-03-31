@@ -1,26 +1,24 @@
-; DEMO
-; Rewrite exactly one byte
+; DEMO: Rewrite exactly one byte to truncate a string
 section .data
     line_1 = "You should see it twice\n"
     line_2 = "\nYou should see it once\n\n\0"
 
-
 section .code
     push    line_1
-    call    print:
+    call    print:              ; Print the first line normally
 
-    push    line_2
-    push    '\0'
-    writeb
+    push    line_2              ; Address of the first char in line_2
+    push    '\0'                ; Null-terminator character
+    writeb                      ; Overwrite the first byte with '\0', cutting the string
 
     push    line_1
-    call    print:
-    
+    call    print:              ; Print the first line again
+
     exit
 
 print:
-	mov 	fr,		1	; vmcall printstr opcode
-	pop 	arg1		; Pointer to string
-	mov		arg2,	0	; Read until \0
+	mov 	fr,		1	        ; syscall code 1: printstr
+	pop 	arg1		        ; arg1 = pointer to the string
+	mov		arg2,	0	        ; arg2 = 0 means read until '\0'
 	vmcall
 	ret

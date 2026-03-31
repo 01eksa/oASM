@@ -1,19 +1,22 @@
+; DEMO: File system operations (Write, Read, Append)
 section .data
     file_path   = "test_file.txt\0"
     str         = "Line 1\nLine 2\n"
     str2        = "Line 3\nLine 4\n"
     success_msg = "Completed successfully\n\0"
     fail_msg    = "Failed to write\n\0"
-    buffer_1    = "\0"*100
-    buffer_2    = "\0"*100
+    buffer_1    = "\0"*100      ; Read buffer 1
+    buffer_2    = "\0"*100      ; Read buffer 2
 
 section .code
+    ; 1. Write to file
     push    file_path
     push    str
-    push    sizeof(str)
+    push    sizeof(str)         ; Bytes to write
     call    write_file:
-    jef     fail:
+    jef     fail:               ; Jump to fail if Error Flag (EF) is set
 
+    ; 2. Read from file
     push    file_path
     push    buffer_1
     push    sizeof(buffer_1)
@@ -21,14 +24,16 @@ section .code
     jef     fail:
 
     push    buffer_1
-    call    print:
+    call    print:              ; Print the read content
 
+    ; 3. Append to file
     push    file_path
     push    str2
     push    sizeof(str2)
     call    append_file:
     jef     fail:
 
+    ; 4. Read updated file
     push    file_path
     push    buffer_2
     push    sizeof(buffer_2)
@@ -42,11 +47,12 @@ section .code
     call    print:
     exit
 
-
 fail:
     push    fail_msg
     call    print:
     exit
+
+; --- Utility Functions ---
 
 print:
     pop     arg1
@@ -56,19 +62,19 @@ print:
     ret
 
 read_file:
-    pop     arg3
-    pop     arg2
-    pop     arg1
-    mov     fr,     0x10
+    pop     arg3                ; size
+    pop     arg2                ; buffer pointer
+    pop     arg1                ; file path
+    mov     fr,     0x10        ; syscall code: readfile
     vmcall
-    pop
+    pop                         ; Discard the returned bytes count from stack
     ret
 
 write_file:
     pop     arg3
     pop     arg2
     pop     arg1
-    mov     fr,     0x11
+    mov     fr,     0x11        ; syscall code: writefile
     vmcall
     ret
 
@@ -76,6 +82,6 @@ append_file:
     pop     arg3
     pop     arg2
     pop     arg1
-    mov     fr,     0x12
+    mov     fr,     0x12        ; syscall code: appendfile
     vmcall
     ret

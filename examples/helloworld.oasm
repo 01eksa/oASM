@@ -2,8 +2,9 @@ section .data
 	msg = "Hello, World!\n\0"
 
 section .code
-	mov			FR,		1	; number of printstr vmcall
-	push     	msg			; pointer to c-style string
-	pop 		ARG1		
+	mov		fr,		1	    ; syscall code: printstr
+	push  	msg			    ; pointer to the string
+	pop 	arg1		    ; Load pointer into argument register
+	mov		arg2,	0       ; string size (0 = print as c-string, all chars until '\0')
 	vmcall
 	exit

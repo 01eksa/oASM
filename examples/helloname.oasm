@@ -1,9 +1,8 @@
-; DEMO
-; Ask for a name and say hello to this name
+; DEMO: Ask for a name and greet the user
 section .data
 	q 		= "Hello! What is your name?\n\0"
 	ask 	= "> \0"
-	name 	= "\0"*20							; 20-char buffer
+	name 	= "\0"*20			                ; Allocate 20-byte buffer for the name
 	nice 	= "Nice to meet you, \0"
 
 section .code
@@ -13,7 +12,7 @@ section .code
 	call 		print:
 
 	push     	name
-	push		sizeof(name)
+	push		sizeof(name)    ; Pass buffer size to prevent overflow
 	call 		input:
 
 	push     	nice
@@ -21,20 +20,19 @@ section .code
 	push     	name
 	call 		print:
 
-	printendl
+	printendl                   ; Print newline
 	exit
 
 print:
-	mov 	fr,		1	; vmcall printstr opcode
-	pop 	arg1		; pointer to string
-	mov		arg2,	0	; read until \0
+	mov 	fr,		1           ; syscall code: printstr
+	pop 	arg1                ; pointer to the string
+	mov		arg2,	0           ; string size (0 = print as c-string, all chars until '\0')
 	vmcall
 	ret
 
-
 input:
-	mov 	fr, 2       ; vmcall scanstr opcode
-	pop		arg2		; size of buffer
-	pop 	arg1        ; pointer to buffer
+	mov 	fr, 2               ; syscall code: scanstr
+	pop		arg2		        ; buffer size
+	pop 	arg1                ; buffer pointer
 	vmcall
 	ret

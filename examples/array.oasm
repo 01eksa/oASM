@@ -1,33 +1,34 @@
-; DEMO
-; Fill array from keyboard and then print it
+; DEMO: Fill array from keyboard and then print it
 section .data
-    array = [0] * 5
+    array = [0] * 5             ; Reserve space for 5 elements (8 bytes each)
 
 section .code
-    mov     cr, 5
+    mov     cr, 5               ; Set loop counter (cr) to 5 iterations
+    mov     reg1, 0             ; reg1 acts as the array index
     input_loop:
-        push    array
-        push    cr
-        dec
-        push    8
-        mul
-        add
-        scanint
-        write
-        loop input_loop:
+        push    array           ; Base address of the array
+        push    reg1            ; Current index
+        push    8               ; Size of one element (int64_t = 8 bytes)
+        mul                     ; Calculate offset: index * 8
+        add                     ; Calculate absolute address: base + offset
 
+        scanint                 ; Read integer from stdin
+        write                   ; Store the read integer at the calculated address
+        inc     reg1            ; Move to the next index
+        loop input_loop:        ; Decrement cr and jump if cr > 0
 
-    mov     cr, 5
+    mov     cr, 5               ; Reset loop counter for printing
+    mov     reg1, 0             ; Reset array index
     output_loop:
         push    array
-        push    cr
-        dec
+        push    reg1
         push    8
         mul
-        add
-        read
-        printint
-        printendl
+        add                     ; Recalculate address for reading
+        read                    ; Load the value from the address to the stack
+        printint                ; Print the value
+        printendl               ; Print a newline
+        inc     reg1
         loop output_loop:
 
     exit

@@ -1,5 +1,4 @@
-; DEMO
-; Guess number game
+; DEMO: Guess number game with RNG
 section .data
 	hi_message 			= "Hello! Try to guess a number between 1 and 10!\n\0"
 	inp_message 		= "> \0"
@@ -7,39 +6,38 @@ section .data
 	less_message		= "My number is less\n\0"
 	more_message		= "My number is more\n\0"
 	congrats_message 	= "Yes! You won!\n\0"
-	number 				= 0
+	number 				= 0     ; Variable to store the target number
 
 section .code
 	push 	hi_message
 	call 	print:
 
-	mov		fr,		0x20		; vmcall randint
-	mov		arg1,	1			; min: 1
-	mov		arg2,	10			; max: 10
+    ; Generate random number
+	mov		fr,		0x20		; syscall code: randint
+	mov		arg1,	1			; Min value
+	mov		arg2,	10			; Max value
 	vmcall
-	pop		number
+	pop		number              ; Save generated number to memory
 
 	main_loop:
-	    clearef					; clear ef (error flag)
+	    clearef					; Clear Error Flag before input
 		push 	inp_message
 		call	print:
 		scanint
-		jef     main_loop:		; back to start of the loop if error
-		dup
+		jef     main_loop:		; If input failed (EF set), ask again
+		dup                     ; Duplicate input for comparison
 
-		push 	number
-		read
-		cmp
-		jif 	win:			; break if guess is correct
+		load 	number
+		cmp                     ; Compare input with target
+		jif 	win:			; Jump if equal
 
 		push 	wrong_message
 		call 	print:
-		push 	number
-		read
-		cmplt					; is enterend number less then actual number?
-		jif 	more:			; so my number is more
-		
-		push	less_message
+		load 	number
+		cmplt					; Check if input < target
+		jif 	more:			; If true, target is MORE than input
+
+		push	less_message    ; Else, target is LESS
 		call	print:
 		jmp		main_loop:
 
@@ -48,16 +46,14 @@ section .code
 		call	print:
 		jmp		main_loop:
 
-		jmp 	main_loop:
-
 	win:
 	push 	congrats_message
 	call 	print:
 	exit
 
 print:
-	mov 	fr,		1	; vmcall printstr opcode
-	pop 	arg1		; Pointer to string
-	mov		arg2,	0	; Read until \0
+	mov 	fr,		1
+	pop 	arg1
+	mov		arg2,	0
 	vmcall
 	ret

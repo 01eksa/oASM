@@ -1,36 +1,35 @@
 section .data
-    field           = " " * 9                    
+    field           = " " * 9                   ; 1D array representing 3x3 grid
     inp_message     = "> \0"
     wrong_num_msg   = "Number out of range!\n\0"
     cell_taken_msg  = "This cell is already taken!\n\0"
     separator       = "|\0"
     line            = "-------\n\0"
-    win_msg         = "Congrats, "      ; there are no \0, so will be printed win_msg + player + win_msg_end
-    player          = "X"      
+    win_msg         = "Congrats, "
+    player          = "X"                       ; Current player marker ('X' or '0')
     win_msg_end     = " won!\n\0"
     draw_msg        = "Draw!\n\0"
-    clear           = "\033[H\033[2J"
+    clear           = "\033[H\033[2J\0"         ; ANSI escape sequence to clear terminal
 
 section .code
-    ; mov     reg3,   0       ; All registers are 0 by default
-    ; this is our move counter
+    ; reg3 acts as the move counter (initialized to 0 by default)
     call    draw_field:
 
     main_loop:
-        call    inp:
-        call    move:
-        inc     reg3
+        call    inp:            ; Get validated input
+        call    move:           ; Update the field
+        inc     reg3            ; Increment move counter
         call    draw_field:
 
         call    check_win:
-        jif     win:
+        jif     win:            ; If BF is true, current player won
 
         push    reg3
-        push    9
+        push    9               ; Check for draw (9 moves max)
         cmp
         jif     draw:
 
-        call    toggle_player:
+        call    toggle_player:  ; Switch 'X' <-> '0'
         jmp     main_loop:
 
     win:
@@ -50,17 +49,10 @@ print:
     vmcall
     ret
 
-printn:
-    mov     fr,     1
-    pop     arg2
-    pop     arg1
-    vmcall
-    ret
-
 printchr:
     mov     fr,     1
     pop     arg1
-    mov     arg2,   1
+    mov     arg2,   1           ; Read exactly 1 char (ignore \0)
     vmcall
     ret
 
@@ -70,8 +62,8 @@ draw_field:
     push    clear
     call    print:
 
-    mov     reg1,   0
-    mov     cr,     3
+    mov     reg1,   0           ; reg1 = current cell index
+    mov     cr,     3           ; 3 rows
     push    line
     call    print:
     draw_field_loop:
@@ -83,59 +75,55 @@ draw_field:
     pop     cr
     ret
 
-
 draw_line:
     push    cr
-
     push    separator
     call    print:
-    mov     cr,     3
+    mov     cr,     3           ; 3 columns per row
     draw_line_loop:
         push    field
         push    reg1
-        add
-        call    printchr:
+        add                     ; Calc address: field base + cell index
+        call    printchr:       ; Print cell content
         push    separator
         call    printchr:
-        inc     reg1
+        inc     reg1            ; Move to next cell
         loop    draw_line_loop:
     printendl
-
     pop     cr
     ret
 
 inp:
-    ; in the end, reg1 will have a correct index of cell on field
-    clearef
+    clearef                     ; Reset Error Flag
 
     push    inp_message
     call    print:
 
     scanint
-    jef     inp:
-    pop     reg1
+    jef     inp:                ; Retry if not a valid integer
+    pop     reg1                ; Store input in reg1
 
     push    reg1
     push    9
-    cmpgt                   ; if num > 9
+    cmpgt                       ; Check if input > 9
     jif     wrong_number:
 
     push    reg1
     push    1
-    cmplt                   ; if num < 1
+    cmplt                       ; Check if input < 1
     jif     wrong_number:
 
-    dec     reg1
+    dec     reg1                ; Convert 1-9 input to 0-8 index
 
     push    field
     push    reg1
     add
-    readb
+    readb                       ; Read character at field[index]
     push    ' '
-    cmp                     
-    jnif    cell_taken:      ; if field[inp] != ' '
+    cmp                         ; Check if cell is empty
+    jnif    cell_taken:         ; Retry if not equal to ' '
 
-    ret
+    ret                         ; Success: reg1 holds a valid, empty cell index
 
     wrong_number:
     push    wrong_num_msg
@@ -147,43 +135,40 @@ inp:
     call    print:
     jmp     inp:
 
-    ret
-
 move:
-    ; reg1 must have correct index of cell on field
+    ; Apply player marker to field[reg1]
     push    field
     push    reg1
-    add                 ; field + reg1 on stack
-    
+    add                         ; Address: field + reg1
     push    player
-    readb               ; player value on stack
-    writeb              ; write player to field
-
+    readb                       ; Load current player marker
+    writeb                      ; Write marker to field
     ret
 
 check_win:
-    ; checks all win conditions, return early if found one
-    ; result will be in BF
+    ; Check all win conditions. Result is stored in BF (Boolean Flag).
     push    cr
 
     push    player
     readb
-    pop     reg1        ; all check_ methods expect player value in reg1
+    pop     reg1                ; All check_* methods expect player marker in reg1
 
     mov     cr, 3
     check_win_loop:
-        ; check all horizontals and verticals
-        mov     reg2,   cr
-        dec     reg2
+        mov     reg2,   cr      ; reg2 = 3, 2, 1
+        dec     reg2            ; reg2 = 2, 1, 0 (row/col indices)
+
         call    check_horizontal:
-        jif     check_win_ret:
+        jif     check_win_ret:  ; Return early if match found
+
         call    check_vertical:
         jif     check_win_ret:
+
         loop    check_win_loop:
-    
-    ; check all diagonals
+
     call    check_main_diag:
     jif     check_win_ret:
+
     call    check_sec_diag:
 
     check_win_ret:
@@ -191,29 +176,26 @@ check_win:
     ret
 
 check_horizontal:
-    ; reg1 must have player value
-    ; reg2 must have number of horizontal (0, 1 or 2)
-    ; in the end, BF has the result
+    ; reg1 = player marker, reg2 = row index (0, 1, 2)
     push    cr
     push    reg2
 
     push    reg2
     push    3
     mul
-    pop     reg2
+    pop     reg2                ; Base index of the row: reg2 * 3
 
-    mov     cr, 3
+    mov     cr, 3               ; 3 cells per row
     check_horizontal_loop:
         push    field
         push    reg2
         add
-        readb
+        readb                   ; Read field[reg2]
         push    reg1
+        cmp                     ; Compare with player marker
+        jnif    check_horizontal_ret: ; Break if mismatch
 
-        cmp                             ; if field[reg2] != reg1
-        jnif    check_horizontal_ret:   ; break
-
-        inc     reg2                    ; in horizontal indexes go +1
+        inc     reg2            ; Move 1 step right
         loop    check_horizontal_loop:
 
     check_horizontal_ret:
@@ -222,24 +204,21 @@ check_horizontal:
     ret
 
 check_vertical:
-    ; reg1 must have player value
-    ; reg2 must have number of vertical (0, 1 or 2)
-    ; in the end, BF will have the result
+    ; reg1 = player marker, reg2 = col index (0, 1, 2)
     push    cr
     push    reg2
 
-    mov     cr, 3
+    mov     cr, 3               ; 3 cells per column
     check_vertical_loop:
         push    field
         push    reg2
         add
         readb
         push    reg1
+        cmp
+        jnif    check_vertical_ret:
 
-        cmp                             ; if field[reg2] != reg1
-        jnif    check_vertical_ret:     ; break
-
-        inc     reg2                    ; in verticals indexes go +3
+        inc     reg2            ; Move 1 step down (index + 3)
         inc     reg2
         inc     reg2
         loop    check_vertical_loop:
@@ -250,13 +229,11 @@ check_vertical:
     ret
 
 check_main_diag:
-    ; reg1 must have player value
-    ; reg2 will be changed
-    ; in the end, BF will have the result
+    ; Checks indices 0, 4, 8
     push    cr
     push    reg2
 
-    mov     reg2,   0
+    mov     reg2,   0           ; Start at top-left
     mov     cr,     3
 
     check_main_diag_loop:
@@ -265,29 +242,26 @@ check_main_diag:
         add
         readb
         push    reg1
-
-        cmp                             ; if field[reg2] != reg1
-        jnif    check_main_diag_ret:    ; break
+        cmp
+        jnif    check_main_diag_ret:
 
         push    reg2
-        push    4                       ; in main diagonal indexes go +4
+        push    4               ; Move diagonally (index + 4)
         add
         pop     reg2
         loop    check_main_diag_loop:
-    
+
     check_main_diag_ret:
     pop     reg2
     pop     cr
     ret
 
 check_sec_diag:
-    ; reg1 must have player value
-    ; reg2 will be changed
-    ; in the end, BF will have the result
+    ; Checks indices 2, 4, 6
     push    cr
     push    reg2
 
-    mov     reg2,   2
+    mov     reg2,   2           ; Start at top-right
     mov     cr,     3
 
     check_sec_diag_loop:
@@ -296,36 +270,32 @@ check_sec_diag:
         add
         readb
         push    reg1
-        
-        cmp                             ; if field[reg2] != reg1
-        jnif    check_sec_diag_ret:     ; break
+        cmp
+        jnif    check_sec_diag_ret:
 
-        inc     reg2                    ; in second diagonal indexes go +2
+        inc     reg2            ; Move diagonally (index + 2)
         inc     reg2
         loop    check_sec_diag_loop:
-    
+
     check_sec_diag_ret:
     pop     reg2
     pop     cr
     ret
 
 toggle_player:
+    ; Swaps 'X' with '0'
     push    player
-    dup
+    dup                         ; Keep address on stack for writing later
     readb
     push    'X'
+    cmp
+    jnif    p0:                 ; Jump if current player is not 'X'
 
-    cmp                 
-    jnif    p0:
-
-    ; if player == X
-    push    '0'
+    push    '0'                 ; If 'X', switch to '0'
     writeb
     ret
 
-    ; if player != X
     p0:
-    push    'X'
+    push    'X'                 ; If '0', switch to 'X'
     writeb
-
     ret
