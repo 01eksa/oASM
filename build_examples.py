@@ -1,11 +1,21 @@
 import os
+import sys
 import subprocess
 
+if not os.path.exists('./bin'):
+    os.makedirs('./bin')
+
 for file in os.listdir('./examples'):
-    print(
-        subprocess.run(
-            ['py', '-m', 'oasm', f'examples/{file}', f'bin/{file.split('.')[0]}.ovm', '--rewrite'],
-            capture_output=True,
-            text=True
-        ).stdout
-    )
+    if file.endswith('.oasm'):
+        source = os.path.join('examples', file)
+        target = os.path.join('bin', file.split('.')[0] + '.ovm')
+        result = subprocess.run(
+                [sys.executable, '-m', 'oasm', source, target, '--rewrite'],
+                capture_output=True,
+                text=True
+            )
+
+        if result.stdout:
+            print(result.stdout)
+        if result.stderr:
+            print(f"Error in {file}: {result.stderr}")
