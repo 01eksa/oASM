@@ -1,0 +1,48 @@
+section .data
+    arr = [1, 2, 3]
+    str = "123\0"
+
+    arr_msg     = "[1, 2, 3]\n\0"
+    str_msg     = "\"123\\0\"\n\0"
+    sizeof_msg  = "size: \0"
+    lenof_msg   = "len: \0"
+
+section .code
+    mov     fr,     1
+    push    arr_msg
+    pop     arg1
+    vmcall
+
+    push    sizeof_msg
+    pop     arg1
+    vmcall
+    push    sizeof(arr)
+    printint
+    printendl
+
+    push    lenof_msg
+    pop     arg1
+    vmcall
+    push    lenof(arr)
+    printint
+    printendl
+
+    push    str_msg
+    pop     arg1
+    vmcall
+
+    push    sizeof_msg
+    pop     arg1
+    vmcall
+    push    sizeof(str)
+    printint
+    printendl
+
+    push    lenof_msg
+    pop     arg1
+    vmcall
+    push    lenof(str)
+    printint
+    printendl
+
+    exit
