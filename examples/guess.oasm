@@ -17,7 +17,7 @@ section .code
 	mov		arg1,	1			; Min value
 	mov		arg2,	10			; Max value
 	vmcall
-	pop		number              ; Save generated number to memory
+	store		number          ; Save generated number to memory
 
 	main_loop:
 	    clearef					; Clear Error Flag before input
