@@ -39,7 +39,7 @@ class Resolver:
             elif isinstance(value, list):
                 byte_value = to_bytes(value, byteorder=config.byteorder)
                 size = len(byte_value)
-                var_type = 'list'
+                var_type = 'arr'
             else:
                 raise RuntimeError(f'Variable {name} has unknown type')
 

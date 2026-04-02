@@ -35,7 +35,7 @@ class ASTBuilder:
         token = self.current_token
 
         if token is None:
-            raise RuntimeError('Expected token, got None')
+            raise OasmSyntaxError(self.tokens[-1].meta, 'Incomplete expression')
 
         if token.type in ('int', 'hex_int', 'float', 'char',):
             self.eat()
@@ -76,7 +76,7 @@ class ASTBuilder:
                 raise OasmSyntaxError(token.meta, f"Expected ')', got {val} instead")
 
             self.eat()
-            self.check_eof()
+            #self.check_eof()
             return FunctionNode(token, ListNode(args))
         elif token.type == 'l_bracket':
             self.eat()
@@ -103,20 +103,8 @@ class ASTBuilder:
             f"Unexpected token: {token.raw_value}"
         )
 
-    def pow(self):
-        left = self.factor()
-
-        if self.current_token is None or self.current_token.raw_value != '^':
-            return left
-
-        op = self.current_token
-        self.eat()
-        right = self.pow()
-
-        return BinOpNode(left, op, right)
-
     def term(self):
-        return self.bin_op(self.pow, ('*', '/'))
+        return self.bin_op(self.factor, ('*', '/', '//'))
 
     def expr(self):
         return self.bin_op(self.term, ('+', '-'))

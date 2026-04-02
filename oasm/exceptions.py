@@ -50,6 +50,15 @@ class OasmValueError(OasmException, ValueError):
         super().__init__(meta, f'ValueError{message}')
 
 
+class OasmZeroDivisionError(OasmException, ZeroDivisionError):
+    def __init__(self, meta: MetaData, message=None):
+        if message is None:
+            message = ''
+        else:
+            message = '\n' + format_error(meta, message)
+        super().__init__(meta, f'ZeroDivisionError{message}')
+
+
 def format_error(meta: MetaData, message: str):
     formated_err = f'{meta.file.content.split('\n')[meta.line - 1]}\n'
     formated_err += ' ' * (meta.column - 1) + '^\n'

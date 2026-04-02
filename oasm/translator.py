@@ -1,7 +1,7 @@
 from . import config
 from .ast_nodes import *
 from .exceptions import OasmSyntaxError, OasmNameError, OasmIndexError
-from .evaluator import Ref, RegisterRef, LabelRef, FunctionRef, DataRef, IndexRef
+from .evaluator import Ref, RegisterRef, LabelRef, DataRef, IndexRef
 from .utils import to_bytes
 
 
@@ -48,19 +48,6 @@ class Translator:
                 return self.labels[label].to_bytes(8, byteorder=config.byteorder)
             else:
                 raise OasmNameError(ref.token.meta, f'Unknown label: {ref.name}')
-        elif isinstance(ref, FunctionRef):
-            match ref.name:
-                case 'sizeof':
-                    size = self.variables[ref.args[0].name]['size']
-                    return size.to_bytes(8, byteorder=config.byteorder)
-                case 'lenof':
-                    if (var := self.variables[ref.args[0].name])['type'] == 'str':
-                        _len = var['size']
-                    elif var['type'] == 'arr':
-                        _len = len(var['value'])
-                    else:
-                        _len = 1
-                    return _len.to_bytes(8, byteorder=config.byteorder)
         else:
             raise TypeError(f'Unknown ref: {ref}')
 

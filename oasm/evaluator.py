@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from .exceptions import *
 from .ast_nodes import *
 from .config import commands, command_aliases, functions
@@ -35,18 +36,11 @@ class RegisterRef(Ref):
     name: str
 
 
-@dataclass
-class FunctionRef(Ref):
-    token: Token
-    name: str
-    args: list
-
-
 class Interpreter:
     def __init__(self, context):
         self.context = context
 
-    def visit(self, node):
+    def visit(self, node) -> int | float | str | list:
         method_name = f'visit_{type(node).__name__}'
         visitor = getattr(self, method_name, self.no_visit_method)
         return visitor(node)
@@ -68,10 +62,14 @@ class Interpreter:
                 return left * right
             case '/':
                 if right == 0:
-                    raise Exception(f'{left} / {right} is incorrect: division by zero!')
+                    raise OasmZeroDivisionError(node.right.tokken.meta, f'{left} / {right} is incorrect: division by zero!')
                 return left / right
+            case '//':
+                if right == 0:
+                    raise OasmZeroDivisionError(node.right.tokken.meta, f'{left} / {right} is incorrect: division by zero!')
+                return int(left / right)
             case _:
-                raise Exception(f'Unexpected operator: {op}')
+                raise OasmSyntaxError(node.op.token.meta, f'Unexpected operator: {op}')
 
     def visit_UnaryOpNode(self, node):
         right = self.visit(node.right)
@@ -117,34 +115,27 @@ class Interpreter:
                 arg_types.append('data')
             elif isinstance(arg, LabelRef):
                 arg_types.append('label')
-            elif isinstance(arg, FunctionRef):
-                arg_types.append(functions[arg.name]['returns'])
             else:
-                raise RuntimeError(f'Unexpected type: {type(arg)} in {node}')
+                raise OasmTypeError(node.token.meta, f'Unexpected type: {arg}')
 
         if functions[node.name]['args'] == arg_types:
-            return FunctionRef(node.token, node.name, args)
+            match node.name:
+                case 'sizeof':
+                    size = self.context.variables[args[0].name]['size']
+                    return size
+                case 'lenof':
+                    if (var := self.context.variables[args[0].name])['type'] == 'str':
+                        _len = var['size']
+                    elif var['type'] == 'arr':
+                        _len = len(var['value'])
+                    else:
+                        _len = 1
+                    return _len
 
         raise OasmTypeError(
             node.token.meta,
             f'{node.name} expected {args}, got {arg_types}'
         )
-
-        # match node.name:
-        #     case 'sizeof':
-        #         args = [self.visit(arg) for arg in node.args]
-        #         if len(args) > 1:
-        #             raise OasmTypeError(node.token.meta, f'{node.name} expected 1 argument, got {len(args)}')
-        #         arg = args[0]
-        #
-        #         var_name = arg.name
-        #         if var_name not in self.context.variables:
-        #             raise OasmNameError(node.token.meta, f'Variable {var_name} not found')
-        #
-        #         var = self.context.variables[var_name]
-        #         return var['size']
-        #     case _:
-        #         raise OasmNameError(node.token.meta, 'Function with this name does not exist')
 
     def visit_ListNode(self, node):
         return [self.visit(element) for element in node.elements]
@@ -170,8 +161,6 @@ class Interpreter:
                 arg_types.append('data')
             elif isinstance(arg, LabelRef):
                 arg_types.append('label')
-            elif isinstance(arg, FunctionRef):
-                arg_types.append(functions[arg.name]['returns'])
             else:
                 raise RuntimeError(f'Unexpected type: {type(arg)} in {node}')
 

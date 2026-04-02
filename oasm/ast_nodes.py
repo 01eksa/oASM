@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from .tokenizer import Token
 from .exceptions import OasmValueError
 
@@ -19,7 +18,7 @@ def get_value(token: Token):
         case 'string':
             return bytes(token.raw_value.strip('"'), 'utf-8').decode('unicode_escape')
         case _:
-            raise OasmValueError('Expected number or char')
+            raise OasmValueError(token.meta, 'Expected number or char')
 
 
 class ASTNode:

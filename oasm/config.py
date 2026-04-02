@@ -24,7 +24,8 @@ commands = {
     "POP": {"code": 17, "size": 1, "args": []},
     "DUP": {"code": 18, "size": 1, "args": []},
     "PUSHDATA": {"code": 19, "size": 9, "args": ["data"]},
-    "POPDATA": {"code": 20, "size": 9, "args": ["data"]},
+    "LOAD": {"code": 20, "size": 9, "args": ["data"]},
+    "STORE": {"code": 21, "size": 9, "args": ["data"]},
 
     "PUSHCP": {"code": 32, "size": 1, "args": []},
     "POPCP": {"code": 33, "size": 1, "args": []},
@@ -44,8 +45,6 @@ commands = {
     "READ": {"code": 67, "size": 1, "args": []},
     "WRITEB": {"code": 68, "size": 1, "args": []},
     "READB": {"code": 69, "size": 1, "args": []},
-    "LOAD": {"code": 70, "size": 9, "args": ["data"]},
-    "STORE": {"code": 71, "size": 9, "args": ["data"]},
 
     "INC": {"code": 80, "size": 1, "args": []},
     "DEC": {"code": 81, "size": 1, "args": []},
@@ -90,7 +89,7 @@ commands = {
 
 command_aliases = {
     "PUSH": ["PUSHREG", "PUSHDATA"],
-    "POP": ["POPREG", "POPDATA"],
+    "POP": ["POPREG",],
     "MOV": ["SETREG"],
     "INC": ["INCREG"],
     "DEC": ["DECREG"],

@@ -37,20 +37,6 @@ class Tokens:
         return iter(self.tokens)
 
 
-# @dataclass
-# class Expr:
-#     _tokens: list[Token]
-#
-#     def __str__(self):
-#         return f'Expr({repr(self._tokens)})'
-#
-#     def __getitem__(self, index):
-#         return self._tokens[index]
-#
-#     def __len__(self):
-#         return len(self._tokens)
-
-
 class Tokenizer:
     def __init__(self, file: File):
         self.file = file
@@ -78,32 +64,12 @@ class Tokenizer:
         ]
 
         self._tokens = []
-        # self._exprs = []
-        #
-        # self._status = {
-        #     'tokens': False,
-        #     'exprs': False,
-        # }
-
-    # @property
-    # def tokens(self) -> list[Token]:
-    #     return self._tokens
-    #
-    # @property
-    # def exprs(self) -> list[Expr]:
-    #     return self._exprs
-    #
-    # @property
-    # def status(self) -> bool:
-    #     return self._status['tokens'] and self._status['exprs']
 
     def work(self):
         self.tokenize()
         return Tokens(self.file, self._tokens)
 
     def tokenize(self):
-        # if self._status['tokens']:
-        #     return
 
         master_pattern = '|'.join(
             f'(?P<{name}>{reg.pattern})' for name, reg in self.token_specification
@@ -138,23 +104,3 @@ class Tokenizer:
                         kind = 'command'
 
             self._tokens.append(Token(kind, value, meta))
-
-        # self._status['tokens'] = True
-
-    # def build_expr(self):
-    #     if self._status['exprs']:
-    #         return
-    #     if not self._status['tokens']:
-    #         raise TokenizerError('You should call tokenize() first')
-    #
-    #     temp_tokens = []
-    #
-    #     for token in self._tokens:
-    #         if token.type == 'newline':
-    #             if temp_tokens:
-    #                 self._exprs.append(Expr(temp_tokens))
-    #                 temp_tokens = []
-    #         else:
-    #             temp_tokens.append(token)
-    #
-    #     self._status['exprs'] = True

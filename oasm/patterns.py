@@ -16,7 +16,7 @@ L_PAREN = re.compile(r'\(')
 R_PAREN = re.compile(r'\)')
 L_BRACKET = re.compile(r'\[')
 R_BRACKET = re.compile(r']')
-OP = re.compile(r'[+\-*/]')
+OP = re.compile(r'//|[+\-*/]')
 ASSIGN = re.compile(r'=')
 COMMA = re.compile(r',')
 
