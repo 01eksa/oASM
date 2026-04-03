@@ -10,6 +10,7 @@ be found at the link above.
 
 ## Table of Contents
 
+- [Hello World example](#Hello-World-example)
 - [File Structure](#file-structure)
 - [Comments](#comments)
 - [Literals](#literals)
@@ -23,9 +24,26 @@ be found at the link above.
     - [Registers](#registers)
     - [Instructions](#instructions)
     - [Overloaded Mnemonics](#overloaded-mnemonics)
-- [Instruction Reference](#instruction-reference)
-- [CLI Usage](#cli-usage)
 - [Examples](#Examples)
+
+---
+
+### Hello World example
+
+A vmcall is invoked by setting `FR` to the vmcall ID and executing `VMCALL`. Arguments are passed via `ARG1`–`ARG8`.
+Refer to the oVM documentation for the full vmcall table.
+
+```asm
+section .data
+	msg = "Hello, World!\n\0"
+
+section .code
+	mov		fr,		1	    ; syscall code: printstr
+	lea 	arg1,   msg	    ; Load pointer to the string into argument register
+	mov		arg2,	0       ; string size (0 = print as c-string, all chars until '\0')
+	vmcall
+	exit
+```
 
 ---
 
@@ -50,7 +68,7 @@ A semicolon (`;`) starts a comment that runs to the end of the line. Comments ma
 
 ```asm
 ; full-line comment
-PUSH 42     ; inline comment
+push    42     ; inline comment
 ```
 
 ---
@@ -143,9 +161,9 @@ section .data
     nums = [10, 20, 30, 40]
 
 section .code
-    LOAD nums[0]    ; loads 10
-    LOAD nums[2]    ; loads 30
-    PUSH nums[1]  ; pushes pointer to the second element
+    load    nums[0]    ; loads 10
+    push    nums[2]    ; loads 30 - see Overloaded Mnemonics section
+    pea     nums[1]    ; pushes pointer to the second element
 ```
 
 For `list` variables the index is an **element index** (each element is 8 bytes). For `str` variables the index is a
@@ -266,158 +284,6 @@ arguments supplied:
 | `DEC`          | (none)         | `DEC`        |
 
 The underlying opcodes (`PUSHR`, `PEA`, `POPR`, `SETR`, `INCR`, `DECR`) can also be written directly.
-
----
-
-## Instruction Reference
-
-For a full description of each instruction's runtime semantics see the oVM documentation. The table below lists the
-source-level syntax accepted by the assembler.
-
-Instructions with no arguments are written as a bare mnemonic. The `Size` column shows the compiled byte size (opcode +
-operands).
-
-### Control Flow
-
-| Mnemonic     | Size | Argument  | Description                          |
-|--------------|------|-----------|--------------------------------------|
-| `EXIT`       | 1    | —         | Terminate execution                  |
-| `VMCALL`     | 1    | —         | Call vmcall identified by `FR`       |
-| `CALL label` | 9    | label ref | Push return address, jump to `label` |
-| `RET`        | 1    | —         | Return to caller                     |
-| `JMP label`  | 9    | label ref | Unconditional jump                   |
-| `JIF label`  | 9    | label ref | Jump if `BF == true`                 |
-| `JNIF label` | 9    | label ref | Jump if `BF == false`                |
-| `JEF label`  | 9    | label ref | Jump if `EF == true`                 |
-| `JNEF label` | 9    | label ref | Jump if `EF == false`                |
-| `LOOP label` | 9    | label ref | Decrement `CR`; jump if `CR > 0`     |
-| `DEBUG`      | 1    | —         | Enter interactive debug console      |
-
-### Stack Operations
-
-| Mnemonic    | Size | Argument  | Description                                  |
-|-------------|------|-----------|----------------------------------------------|
-| `PUSH val`  | 9    | immediate | Push 64-bit immediate                        |
-| `PUSH reg`  | 2    | register  | Push value of register (`PUSHR`)             |
-| `PUSH var`  | 9    | data ref  | Push pointer to data segment (`PEA`)         |
-| `POP`       | 1    | —         | Discard top of stack                         |
-| `POP reg`   | 2    | register  | Pop into register (`POPR`)                   |
-| `DUP`       | 1    | —         | Duplicate top of stack                       |
-| `PEA var`   | 9    | data ref  | Push pointer to data segment (explicit form) |
-| `LOAD var`  | 9    | data ref  | Read 8 bytes from data segment, push         |
-| `STORE var` | 9    | data ref  | Pop, write 8 bytes to data segment           |
-
-### Call Stack Operations
-
-| Mnemonic | Size | Description                     |
-|----------|------|---------------------------------|
-| `PUSHCP` | 1    | Push current `CP` to call stack |
-| `POPCP`  | 1    | Pop call stack into `CP`        |
-
-### Register Operations
-
-| Mnemonic        | Size | Arguments      | Description                               |
-|-----------------|------|----------------|-------------------------------------------|
-| `MOV dst, val`  | 10   | reg, immediate | Set register to immediate (`SETR`)        |
-| `MOV dst, src`  | 3    | reg, reg       | Copy register value                       |
-| `SETR reg, val` | 10   | reg, immediate | Set register to immediate (explicit form) |
-| `PUSHR reg`     | 2    | register       | Push register value (explicit form)       |
-| `POPR reg`      | 2    | register       | Pop into register (explicit form)         |
-| `INC reg`       | 2    | register       | Increment register (`INCR`)               |
-| `DEC reg`       | 2    | register       | Decrement register (`DECR`)               |
-| `INCR reg`      | 2    | register       | Increment register (explicit form)        |
-| `DECR reg`      | 2    | register       | Decrement register (explicit form)        |
-| `CHECKEF`       | 1    | —              | `BF = EF`                                 |
-| `CLEAREF`       | 1    | —              | `EF = false`                              |
-
-### Memory Operations
-
-| Mnemonic | Size | Description                                            |
-|----------|------|--------------------------------------------------------|
-| `ALLOC`  | 1    | Pop `a`; push pointer to a new heap block of `a` bytes |
-| `FREE`   | 1    | Free heap block at address `a`                         |
-| `WRITE`  | 1    | Write `b` (8 bytes) to address `a`                     |
-| `READ`   | 1    | Push 8 bytes read from address `a`                     |
-| `WRITEB` | 1    | Write low byte of `b` to address `a`                   |
-| `READB`  | 1    | Push byte at address `a`, zero-extended                |
-
-### Integer Arithmetic
-
-| Mnemonic | Size | Description                                   |
-|----------|------|-----------------------------------------------|
-| `INC`    | 1    | `a + 1`                                       |
-| `DEC`    | 1    | `a - 1`                                       |
-| `ADD`    | 1    | `a + b`                                       |
-| `SUB`    | 1    | `a - b`                                       |
-| `MUL`    | 1    | `a * b`                                       |
-| `DIV`    | 1    | `a / b`; sets `EF` and pushes `0` if `b == 0` |
-| `MOD`    | 1    | `a % b`; sets `EF` and pushes `0` if `b == 0` |
-| `POW`    | 1    | `pow(a, b)` truncated to `int64_t`            |
-
-### Floating-Point Arithmetic
-
-| Mnemonic | Size | Description                                          |
-|----------|------|------------------------------------------------------|
-| `INCF`   | 1    | `a + 1.0`                                            |
-| `DECF`   | 1    | `a - 1.0`                                            |
-| `ADDF`   | 1    | `a + b`                                              |
-| `SUBF`   | 1    | `a - b`                                              |
-| `MULF`   | 1    | `a * b`                                              |
-| `DIVF`   | 1    | `a / b`; sets `EF` and pushes `0` if `b == 0.0`      |
-| `MODF`   | 1    | `fmod(a, b)`; sets `EF` and pushes `0` if `b == 0.0` |
-| `POWF`   | 1    | `pow(a, b)`                                          |
-
-### Bitwise Operations
-
-| Mnemonic | Size | Description |
-|----------|------|-------------|
-| `AND`    | 1    | `a & b`     |
-| `OR`     | 1    | `a \| b`    |
-| `XOR`    | 1    | `a ^ b`     |
-| `INV`    | 1    | `~a`        |
-| `SHL`    | 1    | `a << b`    |
-| `SHR`    | 1    | `a >> b`    |
-
-### Logic & Comparison
-
-| Mnemonic | Size | Description               |
-|----------|------|---------------------------|
-| `NOT`    | 1    | `BF = !BF`                |
-| `CMP`    | 1    | `BF = (a == b)` (integer) |
-| `CMPLT`  | 1    | `BF = (a < b)` (integer)  |
-| `CMPGT`  | 1    | `BF = (a > b)` (integer)  |
-| `CMPF`   | 1    | `BF = (a == b)` (float)   |
-| `CMPLTF` | 1    | `BF = (a < b)` (float)    |
-| `CMPGTF` | 1    | `BF = (a > b)` (float)    |
-
-### I/O
-
-| Mnemonic     | Size | Description                                                                   |
-|--------------|------|-------------------------------------------------------------------------------|
-| `PRINTENDL`  | 1    | Print a newline to stdout                                                     |
-| `PRINTINT`   | 1    | Print `a` as `int64_t`                                                        |
-| `SCANINT`    | 1    | Read `int64_t` from stdin and push; sets `EF` and pushes `0` on invalid input |
-| `PRINTFLOAT` | 1    | Print `a` as `double`                                                         |
-| `SCANFLOAT`  | 1    | Read `double` from stdin and push; sets `EF` and pushes `0` on invalid input  |
-| `ITOF`       | 1    | Convert `a` from `int64_t` to `double`, push                                  |
-| `FTOI`       | 1    | Convert `a` from `double` to `int64_t` (truncates), push                      |
-
-### VMCalls
-
-A vmcall is invoked by setting `FR` to the vmcall ID and executing `VMCALL`. Arguments are passed via `ARG1`–`ARG8`.
-Refer to the oVM documentation for the full vmcall table.
-
-```asm
-section .data
-	msg = "Hello, World!\n\0"
-
-section .code
-	mov		fr,		1	    ; syscall code: printstr
-	lea 	arg1,   msg	    ; Load pointer to the string into argument register
-	mov		arg2,	0       ; string size (0 = print as c-string, all chars until '\0')
-	vmcall
-	exit
-```
 
 ---
 
