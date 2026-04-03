@@ -23,21 +23,24 @@ commands = {
     "PUSH": {"code": 16, "size": 9, "args": ["i64"]},
     "POP": {"code": 17, "size": 1, "args": []},
     "DUP": {"code": 18, "size": 1, "args": []},
-    "PUSHDATA": {"code": 19, "size": 9, "args": ["data"]},
+    "PEA": {"code": 19, "size": 9, "args": ["data"]},
     "LOAD": {"code": 20, "size": 9, "args": ["data"]},
     "STORE": {"code": 21, "size": 9, "args": ["data"]},
 
     "PUSHCP": {"code": 32, "size": 1, "args": []},
     "POPCP": {"code": 33, "size": 1, "args": []},
 
-    "SETREG": {"code": 48, "size": 10, "args": ["reg", "i64"]},
-    "PUSHREG": {"code": 49, "size": 2, "args": ["reg"]},
-    "POPREG": {"code": 50, "size": 2, "args": ["reg"]},
-    "INCREG": {"code": 51, "size": 2, "args": ["reg"]},
-    "DECREG": {"code": 52, "size": 2, "args": ["reg"]},
+    "SETR": {"code": 48, "size": 10, "args": ["reg", "i64"]},
+    "PUSHR": {"code": 49, "size": 2, "args": ["reg"]},
+    "POPR": {"code": 50, "size": 2, "args": ["reg"]},
+    "INCR": {"code": 51, "size": 2, "args": ["reg"]},
+    "DECR": {"code": 52, "size": 2, "args": ["reg"]},
     "CHECKEF": {"code": 53, "size": 1, "args": []},
     "CLEAREF": {"code": 54, "size": 1, "args": []},
     "MOV": {"code": 55, "size": 3, "args": ["reg", "reg"]},
+    "LEA": {"code": 56, "size": 10, "args": ["reg", "data"]},
+    "LOADR": {"code": 57, "size": 10, "args": ["reg", "data"]},
+    "STORER": {"code": 58, "size": 10, "args": ["data", "reg"]},
 
     "ALLOC": {"code": 64, "size": 1, "args": []},
     "FREE": {"code": 65, "size": 1, "args": []},
@@ -88,11 +91,11 @@ commands = {
 }
 
 command_aliases = {
-    "PUSH": ["PUSHREG", "PUSHDATA"],
-    "POP": ["POPREG",],
-    "MOV": ["SETREG"],
-    "INC": ["INCREG"],
-    "DEC": ["DECREG"],
+    "PUSH": ["PUSHR", "LOAD"],
+    "POP": ["POPR", "STORE"],
+    "MOV": ["SETR", "LOADR", "STORER"],
+    "INC": ["INCR"],
+    "DEC": ["DECR"],
 }
 
 registers = {

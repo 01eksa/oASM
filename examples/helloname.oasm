@@ -6,18 +6,18 @@ section .data
 	nice 	= "Nice to meet you, \0"
 
 section .code
-	push     	q
+	pea     	q
 	call 		print:
-	push     	ask
+	pea     	ask
 	call 		print:
 
-	push     	name
+	pea     	name
 	push		sizeof(name)    ; Pass buffer size to prevent overflow
 	call 		input:
 
-	push     	nice
+	pea     	nice
 	call 		print:
-	push     	name
+	pea     	name
 	call 		print:
 
 	printendl                   ; Print newline

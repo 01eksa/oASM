@@ -33,12 +33,12 @@ section .code
         jmp     main_loop:
 
     win:
-    push    win_msg
+    pea     win_msg
     call    print:
     exit
 
     draw:
-    push    draw_msg
+    pea     draw_msg
     call    print:
     exit
 
@@ -59,16 +59,16 @@ printchr:
 draw_field:
     push    cr
 
-    push    clear
+    pea     clear
     call    print:
 
     mov     reg1,   0           ; reg1 = current cell index
     mov     cr,     3           ; 3 rows
-    push    line
+    pea     line
     call    print:
     draw_field_loop:
         call    draw_line:
-        push    line
+        pea     line
         call    print:
         loop    draw_field_loop:
 
@@ -77,15 +77,15 @@ draw_field:
 
 draw_line:
     push    cr
-    push    separator
+    pea     separator
     call    print:
     mov     cr,     3           ; 3 columns per row
     draw_line_loop:
-        push    field
+        pea     field
         push    reg1
         add                     ; Calc address: field base + cell index
         call    printchr:       ; Print cell content
-        push    separator
+        pea     separator
         call    printchr:
         inc     reg1            ; Move to next cell
         loop    draw_line_loop:
@@ -96,7 +96,7 @@ draw_line:
 inp:
     clearef                     ; Reset Error Flag
 
-    push    inp_message
+    pea     inp_message
     call    print:
 
     scanint
@@ -115,7 +115,7 @@ inp:
 
     dec     reg1                ; Convert 1-9 input to 0-8 index
 
-    push    field
+    pea     field
     push    reg1
     add
     readb                       ; Read character at field[index]
@@ -126,21 +126,21 @@ inp:
     ret                         ; Success: reg1 holds a valid, empty cell index
 
     wrong_number:
-    push    wrong_num_msg
+    pea     wrong_num_msg
     call    print:
     jmp     inp:
 
     cell_taken:
-    push    cell_taken_msg
+    pea     cell_taken_msg
     call    print:
     jmp     inp:
 
 move:
     ; Apply player marker to field[reg1]
-    push    field
+    pea     field
     push    reg1
     add                         ; Address: field + reg1
-    push    player
+    pea     player
     readb                       ; Load current player marker
     writeb                      ; Write marker to field
     ret
@@ -149,7 +149,7 @@ check_win:
     ; Check all win conditions. Result is stored in BF (Boolean Flag).
     push    cr
 
-    push    player
+    pea     player
     readb
     pop     reg1                ; All check_* methods expect player marker in reg1
 
@@ -187,7 +187,7 @@ check_horizontal:
 
     mov     cr, 3               ; 3 cells per row
     check_horizontal_loop:
-        push    field
+        pea     field
         push    reg2
         add
         readb                   ; Read field[reg2]
@@ -210,7 +210,7 @@ check_vertical:
 
     mov     cr, 3               ; 3 cells per column
     check_vertical_loop:
-        push    field
+        pea     field
         push    reg2
         add
         readb
@@ -237,7 +237,7 @@ check_main_diag:
     mov     cr,     3
 
     check_main_diag_loop:
-        push    field
+        pea     field
         push    reg2
         add
         readb
@@ -265,7 +265,7 @@ check_sec_diag:
     mov     cr,     3
 
     check_sec_diag_loop:
-        push    field
+        pea     field
         push    reg2
         add
         readb
@@ -284,7 +284,7 @@ check_sec_diag:
 
 toggle_player:
     ; Swaps 'X' with '0'
-    push    player
+    pea     player
     dup                         ; Keep address on stack for writing later
     readb
     push    'X'

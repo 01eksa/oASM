@@ -9,37 +9,31 @@ section .data
 
 section .code
     mov     fr,     1
-    push    arr_msg
-    pop     arg1
+    lea     arg1,   arr_msg
     vmcall
 
-    push    sizeof_msg
-    pop     arg1
+    lea     arg1,   sizeof_msg
     vmcall
     push    sizeof(arr)
     printint
     printendl
 
-    push    lenof_msg
-    pop     arg1
+    lea     arg1,   lenof_msg
     vmcall
     push    lenof(arr)
     printint
     printendl
 
-    push    str_msg
-    pop     arg1
+    lea     arg1,   str_msg
     vmcall
 
-    push    sizeof_msg
-    pop     arg1
+    lea     arg1,   sizeof_msg
     vmcall
     push    sizeof(str)
     printint
     printendl
 
-    push    lenof_msg
-    pop     arg1
+    pop     arg1,   lenof_msg
     vmcall
     push    lenof(str)
     printint

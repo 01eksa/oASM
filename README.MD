@@ -251,18 +251,21 @@ arguments supplied:
 | Written form   | Argument types | Assembled as |
 |----------------|----------------|--------------|
 | `PUSH val`     | immediate      | `PUSH`       |
-| `PUSH reg`     | register       | `PUSHREG`    |
-| `PUSH var`     | data ref       | `PUSHDATA`   |
-| `POP reg`      | register       | `POPREG`     |
+| `PUSH reg`     | register       | `PUSHR`      |
+| `PUSH var`     | data ref       | `LOAD`       |
 | `POP`          | (none)         | `POP`        |
+| `POP reg`      | register       | `POPR`       |
+| `POP var`      | data ref       | `STORE`      |
 | `MOV dst, src` | reg, reg       | `MOV`        |
-| `MOV dst, val` | reg, immediate | `SETREG`     |
-| `INC reg`      | register       | `INCREG`     |
+| `MOV dst, val` | reg, immediate | `SETR`       |
+| `MOV dst, var` | reg, data ref  | `LOADR`      |
+| `MOV var, src` | data ref, reg  | `STORER`     |
+| `INC reg`      | register       | `INCR`       |
 | `INC`          | (none)         | `INC`        |
-| `DEC reg`      | register       | `DECREG`     |
+| `DEC reg`      | register       | `DECR`       |
 | `DEC`          | (none)         | `DEC`        |
 
-The underlying opcodes (`PUSHREG`, `PUSHDATA`, `POPREG`, `SETREG`, `INCREG`, `DECREG`) can also be written directly.
+The underlying opcodes (`PUSHR`, `PEA`, `POPR`, `SETR`, `INCR`, `DECR`) can also be written directly.
 
 ---
 
@@ -292,17 +295,17 @@ operands).
 
 ### Stack Operations
 
-| Mnemonic       | Size | Argument  | Description                                  |
-|----------------|------|-----------|----------------------------------------------|
-| `PUSH val`     | 9    | immediate | Push 64-bit immediate                        |
-| `PUSH reg`     | 2    | register  | Push value of register (`PUSHREG`)           |
-| `PUSH var`     | 9    | data ref  | Push pointer to data segment (`PUSHDATA`)    |
-| `POP`          | 1    | —         | Discard top of stack                         |
-| `POP reg`      | 2    | register  | Pop into register (`POPREG`)                 |
-| `DUP`          | 1    | —         | Duplicate top of stack                       |
-| `PUSHDATA var` | 9    | data ref  | Push pointer to data segment (explicit form) |
-| `LOAD var`     | 9    | data ref  | Read 8 bytes from data segment, push         |
-| `STORE var`    | 9    | data ref  | Pop, write 8 bytes to data segment           |
+| Mnemonic    | Size | Argument  | Description                                  |
+|-------------|------|-----------|----------------------------------------------|
+| `PUSH val`  | 9    | immediate | Push 64-bit immediate                        |
+| `PUSH reg`  | 2    | register  | Push value of register (`PUSHR`)             |
+| `PUSH var`  | 9    | data ref  | Push pointer to data segment (`PEA`)         |
+| `POP`       | 1    | —         | Discard top of stack                         |
+| `POP reg`   | 2    | register  | Pop into register (`POPR`)                   |
+| `DUP`       | 1    | —         | Duplicate top of stack                       |
+| `PEA var`   | 9    | data ref  | Push pointer to data segment (explicit form) |
+| `LOAD var`  | 9    | data ref  | Read 8 bytes from data segment, push         |
+| `STORE var` | 9    | data ref  | Pop, write 8 bytes to data segment           |
 
 ### Call Stack Operations
 
@@ -313,19 +316,19 @@ operands).
 
 ### Register Operations
 
-| Mnemonic          | Size | Arguments      | Description                               |
-|-------------------|------|----------------|-------------------------------------------|
-| `MOV dst, val`    | 10   | reg, immediate | Set register to immediate (`SETREG`)      |
-| `MOV dst, src`    | 3    | reg, reg       | Copy register value                       |
-| `SETREG reg, val` | 10   | reg, immediate | Set register to immediate (explicit form) |
-| `PUSHREG reg`     | 2    | register       | Push register value (explicit form)       |
-| `POPREG reg`      | 2    | register       | Pop into register (explicit form)         |
-| `INC reg`         | 2    | register       | Increment register (`INCREG`)             |
-| `DEC reg`         | 2    | register       | Decrement register (`DECREG`)             |
-| `INCREG reg`      | 2    | register       | Increment register (explicit form)        |
-| `DECREG reg`      | 2    | register       | Decrement register (explicit form)        |
-| `CHECKEF`         | 1    | —              | `BF = EF`                                 |
-| `CLEAREF`         | 1    | —              | `EF = false`                              |
+| Mnemonic        | Size | Arguments      | Description                               |
+|-----------------|------|----------------|-------------------------------------------|
+| `MOV dst, val`  | 10   | reg, immediate | Set register to immediate (`SETR`)        |
+| `MOV dst, src`  | 3    | reg, reg       | Copy register value                       |
+| `SETR reg, val` | 10   | reg, immediate | Set register to immediate (explicit form) |
+| `PUSHR reg`     | 2    | register       | Push register value (explicit form)       |
+| `POPR reg`      | 2    | register       | Pop into register (explicit form)         |
+| `INC reg`       | 2    | register       | Increment register (`INCR`)               |
+| `DEC reg`       | 2    | register       | Decrement register (`DECR`)               |
+| `INCR reg`      | 2    | register       | Increment register (explicit form)        |
+| `DECR reg`      | 2    | register       | Decrement register (explicit form)        |
+| `CHECKEF`       | 1    | —              | `BF = EF`                                 |
+| `CLEAREF`       | 1    | —              | `EF = false`                              |
 
 ### Memory Operations
 
@@ -409,10 +412,9 @@ section .data
 	msg = "Hello, World!\n\0"
 
 section .code
-	mov		    fr,		1	    ; syscall code: printstr
-	push  	    msg			    ; pointer to the string
-	pop 	    arg1		    ; Load pointer into argument register
-	mov		    arg2,	0       ; string size (0 = print as c-string, all chars until '\0')
+	mov		fr,		1	    ; syscall code: printstr
+	lea 	arg1,   msg	    ; Load pointer to the string into argument register
+	mov		arg2,	0       ; string size (0 = print as c-string, all chars until '\0')
 	vmcall
 	exit
 ```

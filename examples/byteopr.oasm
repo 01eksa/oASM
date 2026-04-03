@@ -4,14 +4,14 @@ section .data
     line_2 = "\nYou should see it once\n\n\0"
 
 section .code
-    push    line_1
+    pea     line_1
     call    print:              ; Print the first line normally
 
-    push    line_2              ; Address of the first char in line_2
+    pea     line_2              ; Address of the first char in line_2
     push    '\0'                ; Null-terminator character
     writeb                      ; Overwrite the first byte with '\0', cutting the string
 
-    push    line_1
+    pea     line_1
     call    print:              ; Print the first line again
 
     exit

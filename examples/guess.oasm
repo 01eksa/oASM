@@ -9,19 +9,19 @@ section .data
 	number 				= 0     ; Variable to store the target number
 
 section .code
-	push 	hi_message
+	lea 	arg1,   hi_message
 	call 	print:
 
     ; Generate random number
-	mov		fr,		0x20		; syscall code: randint
-	mov		arg1,	1			; Min value
-	mov		arg2,	10			; Max value
+	mov		    fr,		0x20		; syscall code: randint
+	mov		    arg1,	1			; Min value
+	mov		    arg2,	10			; Max value
 	vmcall
-	store		number          ; Save generated number to memory
+	store	    number              ; Save generated number to memory
 
 	main_loop:
 	    clearef					; Clear Error Flag before input
-		push 	inp_message
+		lea 	arg1,   inp_message
 		call	print:
 		scanint
 		jef     main_loop:		; If input failed (EF set), ask again
@@ -31,29 +31,29 @@ section .code
 		cmp                     ; Compare input with target
 		jif 	win:			; Jump if equal
 
-		push 	wrong_message
+		lea 	arg1,   wrong_message
 		call 	print:
 		load 	number
 		cmplt					; Check if input < target
 		jif 	more:			; If true, target is MORE than input
 
-		push	less_message    ; Else, target is LESS
+		lea 	arg1,   less_message    ; Else, target is LESS
 		call	print:
 		jmp		main_loop:
 
 		more:
-		push	more_message
+		lea 	arg1,   more_message
 		call	print:
 		jmp		main_loop:
 
 	win:
-	push 	congrats_message
+	lea 	arg1,   congrats_message
 	call 	print:
 	exit
 
 print:
+    ; arg1 sets manually before call print:
 	mov 	fr,		1
-	pop 	arg1
 	mov		arg2,	0
 	vmcall
 	ret

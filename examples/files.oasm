@@ -10,45 +10,45 @@ section .data
 
 section .code
     ; 1. Write to file
-    push    file_path
-    push    str
+    pea     file_path
+    pea     str
     push    sizeof(str)         ; Bytes to write
     call    write_file:
     jef     fail:               ; Jump to fail if Error Flag (EF) is set
 
     ; 2. Read from file
-    push    file_path
-    push    buffer_1
+    pea     file_path
+    pea     buffer_1
     push    sizeof(buffer_1)
     call    read_file:
     jef     fail:
 
-    push    buffer_1
+    pea     buffer_1
     call    print:              ; Print the read content
 
     ; 3. Append to file
-    push    file_path
-    push    str2
+    pea     file_path
+    pea     str2
     push    sizeof(str2)
     call    append_file:
     jef     fail:
 
     ; 4. Read updated file
-    push    file_path
-    push    buffer_2
+    pea     file_path
+    pea     buffer_2
     push    sizeof(buffer_2)
     call    read_file:
     jef     fail:
 
-    push    buffer_2
+    pea     buffer_2
     call    print:
 
-    push    success_msg
+    pea     success_msg
     call    print:
     exit
 
 fail:
-    push    fail_msg
+    pea     fail_msg
     call    print:
     exit
 
