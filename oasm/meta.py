@@ -1,5 +1,18 @@
 from dataclasses import dataclass
 
+
+@dataclass
+class File:
+	name: str
+	content: str
+
+	def __str__(self):
+		return f'File("{self.name}")'
+
+	def __repr__(self):
+		return f'File("{self.name}")'
+
+
 @dataclass
 class MetaData:
 	file: File
@@ -14,15 +27,3 @@ class MetaData:
 
 	def __repr__(self):
 		return f'MetaData(file={self.file}, line={self.line}, column={self.column})'
-
-
-@dataclass
-class File:
-	name: str
-	content: str
-
-	def __str__(self):
-		return f'File("{self.name}")'
-
-	def __repr__(self):
-		return f'File("{self.name}")'
