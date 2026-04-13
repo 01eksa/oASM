@@ -330,4 +330,11 @@ There is script to build them:
 py build_examples.py
 ```
 
+You can also use flags:
+
+```bash
+py build_examples.py --big
+```
+
+
 This script assembles all .oasm files into the `/bin/` folder.
