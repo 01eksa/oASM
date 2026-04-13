@@ -53,7 +53,7 @@ def save_file(file_name: str, file_contents: bytes, rewrite: bool = False):
 def process_file(file_name: str, target_file_name: str = None, rewrite: bool = False):
     file = load_file(file_name)
 
-    print(s.success('File successfully uploaded.'))
+    print(s.success(f'File {file_name} successfully uploaded.'))
     bin_file = get_bin(file)
     print(s.success('Translation to bytecode complete.'))
 
@@ -90,37 +90,37 @@ def live_session():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
+    argparser = argparse.ArgumentParser(
         prog='oASM',
         description='Assembler for oVM',
     )
 
-    parser.add_argument('source', nargs='?', help='Source (*.oasm file)', default=None)
-    parser.add_argument('target', nargs='?', help='Target (*.ovm file)', default=None)
-    parser.add_argument(
+    argparser.add_argument('source', nargs='?', help='Source (*.oasm file)', default=None)
+    argparser.add_argument('target', nargs='?', help='Target (*.ovm file)', default=None)
+    argparser.add_argument(
         '--big',
         action='store_true',
         help='Use this flag to save all numbers in big-endian'
     )
-    parser.add_argument(
+    argparser.add_argument(
         '--rewrite',
         action='store_true',
         help='Use this flag to rewrite existing file without asking'
     )
-    parser.add_argument(
+    argparser.add_argument(
         '--stack-size',
         type=int,
         default=0,
         help='Size of stack in elements (not bytes). 0 = default'
     )
-    parser.add_argument(
+    argparser.add_argument(
         '--call-stack-size',
         type=int,
         default=0,
         help='Size of call stackin elements (number of nested calls). 0 = default'
     )
 
-    args = parser.parse_args()
+    args = argparser.parse_args()
 
     if args.big:
         config.byteorder = 'big'
