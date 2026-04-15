@@ -57,7 +57,7 @@ class Translator:
 
         file = b''
 
-        header = to_bytes(config.HEADER, config.byteorder)
+        header = config.HEADER.to_bytes(4, byteorder=config.byteorder, signed=True)
         version = config.MAJOR.to_bytes(2, byteorder=config.byteorder) + config.MINOR.to_bytes(2, byteorder=config.byteorder)
         data_size = len(self.data_section).to_bytes(8, byteorder=config.byteorder)
         code_size = len(self.code_section).to_bytes(8, byteorder=config.byteorder)
