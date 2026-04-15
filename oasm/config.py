@@ -1,6 +1,6 @@
 from typing import Literal
 
-HEADER = "OVM>"
+HEADER = 0x3E4D564F
 MAJOR = 0
 MINOR = 1
 byteorder: Literal['little', 'big'] = 'little'

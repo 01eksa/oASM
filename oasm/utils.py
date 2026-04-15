@@ -2,7 +2,7 @@ from typing import Literal
 import struct
 
 
-def to_bytes(value, byteorder: Literal['little', 'big'] = 'little') -> bytes:
+def to_bytes(value: int | float | str | list, byteorder: Literal['little', 'big'] = 'little') -> bytes:
     if isinstance(value, int):
         return value.to_bytes(8, byteorder=byteorder, signed=True)
 
